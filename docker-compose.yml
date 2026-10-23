@@ -1,0 +1,37 @@
+# Dev-only credentials. Host ports can be moved with API_PORT / POSTGRES_PORT if 8000 or 5432 is taken.
+services:
+  db:
+    image: postgres:16.13-alpine
+    environment:
+      POSTGRES_USER: biyahe
+      POSTGRES_PASSWORD: biyahe
+      POSTGRES_DB: biyahe
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biyahe -d biyahe"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://biyahe:biyahe@db:5432/biyahe
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Fail-fast startup exits non-zero if the DB is not ready; this brings it back.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
