@@ -6,7 +6,7 @@ Plain-language jeepney directions for Angeles City. Pick where you are and where
 
 Working name. Covers the six color-coded routes, each run in two directions (12 route records): Yellow, Blue, Purple, Grey, Red and Dark Yellow. See [SPEC.md](SPEC.md) for the full specification.
 
-> **Status:** MVP in progress (3-day sprint). Sections marked _TODO_ are filled in as the pieces land. See [roadmap.md](roadmap.md).
+> **Status:** MVP in progress (3-day sprint). Sections marked _TODO_ are filled in as the pieces land. See [roadmap.md](docs/roadmap.md).
 
 <!-- TODO Day 3: screenshot of the map page -->
 
