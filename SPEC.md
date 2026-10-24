@@ -14,7 +14,7 @@ Working name. A web app that gives plain-language jeepney directions for Angeles
 8. Database Schema
 9. Route Data Pipeline
 10. Configuration and Tunables
-11. Performance and Measurement Requirements
+11. Measurement Requirements
 12. Degraded and Error Conditions
 13. Constraints, Conventions and Documentation Rules
 14. Manual Verification Checklist and Traceability
@@ -82,7 +82,7 @@ Nothing is built. Route data does not exist anywhere and must be created (Sectio
 |---|---|---|
 | 1 | Repo skeleton, Docker/Compose, `sql/schema.sql`, `queries.py`, `/health`, reports POST/GET, tests, CI. Check OSM coverage with Overpass Turbo (Section 9.2), then hand-trace only the routes OSM lacks | CI is green on a PR; every one of the 12 route records is either found in OSM or has waypoints |
 | 2 | `fetch_osm.py`, `snap_routes.py`, `build_routes.py`, `validate.py`, `seed.py`, routes/stops endpoints, planner and `/api/plan`, planner tests | The 10 test trips (Section 11) run and results are recorded |
-| 3 | Map page, benchmark script, docs (README, ARCHITECTURE, DECISIONS, data/README), final checklist, PR | Section 14 checklist passes |
+| 3 | Map page, docs (README, ARCHITECTURE, DECISIONS, data/README), final checklist, PR | Section 14 checklist passes |
 
 If Day 2 slips, cut the map page's stop search first and keep map-tap only.
 
@@ -103,11 +103,10 @@ Each requirement is pass/fail against a running service.
 
 Non-functional:
 
-- **NFR-1** `/api/plan` p95 latency under 200 ms on the warm in-memory graph (Section 11).
-- **NFR-2** At least 8 of 10 real, known trips planned correctly (Section 11).
-- **NFR-3** `docker compose up` starts API and database with no manual steps beyond a one-time seed command.
-- **NFR-4** Every endpoint in this document appears in the README, and every tool in Section 3 has an entry in `DECISIONS.md`.
-- **NFR-5** The page and README credit "(c) OpenStreetMap contributors".
+- **NFR-1** At least 8 of 10 real, known trips planned correctly (Section 11).
+- **NFR-2** `docker compose up` starts API and database with no manual steps beyond a one-time seed command.
+- **NFR-3** Every endpoint in this document appears in the README, and every tool in Section 3 has an entry in `DECISIONS.md`.
+- **NFR-4** The page and README credit "(c) OpenStreetMap contributors".
 
 ## 6. API Contracts (HTTP)
 
@@ -351,7 +350,6 @@ All are environment variables with defaults; none are hardcoded constants.
 | `TRANSFER_RADIUS_M` | 100 | Stops within this distance count as one transfer point |
 | `TRANSFER_PENALTY_KM` | 1.0 | Flat cost added each time you board a jeep |
 | `WALK_COST_FACTOR` | 2.0 | Walking costs this many times riding, per km |
-| `GRAPH_MODE` | `cached` | `cached` builds the graph at startup; `rebuild` builds it per request (benchmark only) |
 
 The two cost values are starting guesses. They are tuned once against the 10 test trips (Section 11) and the final values and the reason go into `DECISIONS.md`.
 
@@ -363,18 +361,15 @@ The two cost values are starting guesses. They are tuned once against the 10 tes
 - Search: Dijkstra. The lowest-cost path is returned. Because every boarding costs a penalty, fewer jeeps are preferred without a separate "fewest transfers" search.
 - Ride distance uses straight lines between stops, not the snapped line length. This is an accepted approximation for the MVP.
 
-## 11. Performance and Measurement Requirements
+## 11. Measurement Requirements
 
 No figures exist yet; these are targets, and results are written into `docs/DECISIONS.md` when measured.
 
 | Metric | Target | How measured |
 |---|---|---|
-| `/api/plan` p50 and p95 latency, warm | p95 under 200 ms | `bench/plan_bench.py`: 200 requests between random stop pairs, prints p50/p95 |
-| Cached graph vs. rebuild per request | Report both numbers and the ratio | same script with `GRAPH_MODE=cached` then `rebuild` |
 | Plan correctness | At least 8 of 10 | `tests/test_trips.py`: 10 trips you personally know, each with the expected colors in order |
-| Page load on a phone | Under 3 s | One Lighthouse run, result saved |
 
-The latency target is measured on the developer's machine; the number is reported with that hardware stated, not presented as production performance. If a target is missed, the real number is reported, not adjusted.
+If a target is missed, the real number is reported, not adjusted.
 
 ## 12. Degraded and Error Conditions
 
@@ -395,7 +390,7 @@ Status rule: `4xx` means the caller's input is wrong; `5xx` means our fault.
 ## 13. Constraints, Conventions and Documentation Rules
 
 - **Data boundary.** No accounts, no logins, no personal data. A report's optional pin marks a problem location, not the user. No third-party service is called at runtime other than loading OpenStreetMap map tiles in the browser.
-- **Licensing.** OpenStreetMap data and tiles are ODbL / tile-policy bound: attribution on the page and in the README (NFR-5). Route lines and stops imported from OSM live in `routes.geojson`, which makes that file OSM-derived data; the README says so and links to the OSM copyright page, and `source: "osm"` marks which routes are affected. Read the ODbL terms on the OSM site before publishing the repository, since derived databases carry conditions. Google Maps is used only as a memory aid; no Google data is copied into the repository.
+- **Licensing.** OpenStreetMap data and tiles are ODbL / tile-policy bound: attribution on the page and in the README (NFR-4). Route lines and stops imported from OSM live in `routes.geojson`, which makes that file OSM-derived data; the README says so and links to the OSM copyright page, and `source: "osm"` marks which routes are affected. Read the ODbL terms on the OSM site before publishing the repository, since derived databases carry conditions. Google Maps is used only as a memory aid; no Google data is copied into the repository.
 - **Secrets.** Credentials come from environment variables; nothing sensitive is committed.
 - **SQL rules (no ORM).** Every query uses driver parameters (`%s` placeholders); user input is never formatted or concatenated into SQL text. The stop search passes `q` as a parameter (`name ILIKE '%' || %s || '%'`). Each multi-statement write (the seed) runs in one transaction. Reads in `queries.py` return plain dicts or tuples, and Pydantic models in `schemas.py` shape the API response.
 - **Source of truth.** This file governs API shapes, schema and data format. If code and this spec disagree, one of them is a bug and the PR must fix it.
@@ -411,7 +406,6 @@ data/       raw/waypoints.csv, osm_overrides.csv, prefer_traced.txt,
             routes/from_osm.geojson, routes/from_traced.geojson, routes/routes.geojson,
             fetch_osm.py, snap_routes.py, build_routes.py, validate.py, seed.py, README.md
 tests/      api/, planner/, data/, test_trips.py
-bench/      plan_bench.py
 docs/       README.md (or root), ARCHITECTURE.md, DECISIONS.md
 Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 ```
@@ -432,28 +426,26 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 9. Stop the database container: `/api/plan` still returns `200`, `/api/reports` returns `503`, `/health` shows `database: down`.
 10. Add a bad row to `waypoints.csv` (gap in `seq`) and run `validate.py`: it fails; CI would fail the build.
 11. Push a deliberately failing test: CI fails. Fix it: CI passes.
-12. Run `bench/plan_bench.py` in both `GRAPH_MODE` values; p95 under 200 ms in `cached`; both results recorded in `DECISIONS.md`.
-13. Run `tests/test_trips.py`: at least 8 of 10 trips pass; failures are listed in the docs as known data gaps.
-14. Compare README's endpoint table to `/docs`: every endpoint matches. Every Section 3 tool has a `DECISIONS.md` entry.
-15. Run `fetch_osm.py`: it prints a coverage line for each of the 12 route records (found or missing, stop count, line connected). Any route marked found has `source: "osm"` and a non-null `osm_relation_id` in `from_osm.geojson`.
-16. Run `build_routes.py` and `validate.py` with one route taken from OSM and one hand-traced: both appear in `routes.geojson`, all 12 IDs are present, and validation passes. Then list an OSM route in `prefer_traced.txt` and confirm the build switches it to the traced version.
+12. Run `tests/test_trips.py`: at least 8 of 10 trips pass; failures are listed in the docs as known data gaps.
+13. Compare README's endpoint table to `/docs`: every endpoint matches. Every Section 3 tool has a `DECISIONS.md` entry.
+14. Run `fetch_osm.py`: it prints a coverage line for each of the 12 route records (found or missing, stop count, line connected). Any route marked found has `source: "osm"` and a non-null `osm_relation_id` in `from_osm.geojson`.
+15. Run `build_routes.py` and `validate.py` with one route taken from OSM and one hand-traced: both appear in `routes.geojson`, all 12 IDs are present, and validation passes. Then list an OSM route in `prefer_traced.txt` and confirm the build switches it to the traced version.
 
 | Requirement | Verified by |
 |---|---|
-| FR-1, FR-2 | 7, 13 |
+| FR-1, FR-2 | 7, 12 |
 | FR-3 | 5 |
 | FR-4 | 6 |
 | FR-5 | 2, 3 |
 | FR-6 | 2, 4 |
-| FR-7 | 1, 10, 15, 16 |
+| FR-7 | 1, 10, 14, 15 |
 | FR-8 | 1 |
 | FR-9 | 1, 9 |
 | FR-10 | 3, 8 |
 | NFR-1 | 12 |
-| NFR-2 | 13 |
-| NFR-3 | 1 |
-| NFR-4 | 14 |
-| NFR-5 | 1 (visual check) |
+| NFR-2 | 1 |
+| NFR-3 | 13 |
+| NFR-4 | 1 (visual check) |
 
 ## 15. Cut List and Open Items
 
@@ -462,7 +454,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 | Cut | Reason |
 |---|---|
 | PostGIS | Plain latitude/longitude and a small distance function are enough for 12 routes; one less extension to run and explain |
-| Redis / response caching | The in-memory graph already removes the slow part; add only if the benchmark shows a need |
+| Redis / response caching | The in-memory graph already removes the slow part; add only if a measured need appears |
 | React / front-end build step | A static page with Leaflet is easier to modify and defend |
 | Accounts, login, rate limiting | No personal data to protect; reports cannot change route data |
 | Fares, tricycles, buses, real-time | No reliable data |
