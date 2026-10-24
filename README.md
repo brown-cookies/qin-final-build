@@ -93,7 +93,7 @@ FastAPI serves a JSON API and a static Leaflet map page. A pure-Python planner (
 
 ## Route data
 
-Route data is created offline and committed as `data/routes/routes.geojson`. Routes come from OpenStreetMap where it has them, and from hand-traced waypoints snapped to roads with OSRM where it does not. Provenance per route, the OSM fetch date and known gaps will be in `data/README.md` (planned, not written yet).
+Route data is created offline and committed as `data/routes/routes.geojson`. All 12 routes are hand-traced waypoints, snapped to roads with OSRM (offline script). Provenance per route, the snap date and known gaps will be in `data/README.md` (planned, not written yet).
 
 Re-seeding is safe and never touches reports.
 
@@ -103,6 +103,6 @@ Jeepneys only. No fares, tricycles, buses, real-time tracking, accounts or Tagal
 
 ## Attribution and license
 
-Map tiles and route data derived from OpenStreetMap: **(c) OpenStreetMap contributors**, available under the [Open Database License](https://www.openstreetmap.org/copyright). `data/routes/routes.geojson` contains OSM-derived data for routes marked `source: "osm"`, and carries ODbL conditions.
+Map tiles and route data derived from OpenStreetMap: **(c) OpenStreetMap contributors**, available under the [Open Database License](https://www.openstreetmap.org/copyright). Route line geometry in `data/routes/routes.geojson` comes from OSRM, which runs on OSM road data, so treat it as OSM-derived and subject to ODbL conditions.
 
 _TODO: add project license after reading the ODbL terms (SPEC Section 13)._
