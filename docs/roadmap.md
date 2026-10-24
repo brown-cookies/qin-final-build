@@ -2,7 +2,7 @@
 
 Source: `SPEC.md`. Plan: three calendar days. Day 1 starts with the open-items register (Day 0 block, morning) and then builds the scaffold. Days 2 and 3 carry the weight.
 
-**Deviation from SPEC Section 4 (SPEC left unchanged by decision).** The spec puts the OSM coverage check and hand-tracing on Day 1. Here the coverage check and decisions run first thing on Day 1 (they are open items), the heavy data and planner work moves to Day 2, and tuning, map and docs go on Day 3. `SPEC.md` Section 4 is not edited, so it and this file disagree on the day split; this file is the working plan. Everything else in the spec still governs.
+**Deviation from SPEC Section 4 (SPEC left unchanged by decision).** The spec starts dropping route waypoints on Day 1. Here the decisions run first thing on Day 1 (they are open items), the heavy data and planner work moves to Day 2, and tuning, map and docs go on Day 3. `SPEC.md` Section 4 is not edited for the day split, so it and this file disagree on Day 1; this file is the working plan. Everything else in the spec still governs.
 
 Effort split (rough): Day 1 ~30% (Day 0 block ~10% + scaffold ~20%), Day 2 ~35%, Day 3 ~35%.
 
@@ -12,8 +12,8 @@ Goal: no unknown left that can block building. Output is `docs/OPEN_ITEMS.md`: o
 
 | # | Open item (SPEC Section 15) | Action | Answer lands in | Resolvable today? |
 |---|---|---|---|---|
-| 1 | Which of the 12 route records exist in OSM | Run the Section 9.2 Overpass query in Overpass Turbo; note found / missing / broken per route | `data/README.md` | Yes |
-| 2 | Relations matching by name but not `from`/`to` | Pair them by hand | `data/osm_overrides.csv` | Yes, from item 1 |
+| 1 | ~~Which of the 12 route records exist in OSM~~ | Dropped: all 12 are hand-traced | n/a | n/a |
+| 2 | ~~Relations matching by name but not `from`/`to`~~ | Dropped with item 1 | n/a | n/a |
 | 3 | Exact pin for each named place (Villa, Pampang, Pandan, Checkpoint, Holy, Highway, Balibago, Sapang Bato, Angeles, Main Gate, Friendship) | Pick the real boarding spot, record lat/lng; "Highway" and "Angeles" need a specific terminal or main stop | `data/README.md` | Yes |
 | 4 | The 10 test trips and expected colors | Write trips you personally know, with expected colors in order; include at least 2 single-jeep, 2 transfer, and the Purple/Grey and Yellow/Blue shared-stop cases | `tests/test_trips.py` (fixture list) | Yes, before planner work |
 | 5 | Decisions assumed (4 items: one route per color, map page in scope, English only, reports public) | Confirm or change | `docs/OPEN_ITEMS.md`, `docs/DECISIONS.md` | Yes |
@@ -23,9 +23,9 @@ Also today:
 
 - Read the ODbL terms on the OSM site (SPEC Section 13) before the repo is published; note any conditions.
 - Pre-flight: Docker, Compose, Python, `git` and a GitHub repo with Actions enabled all work; feature branch created.
-- Decide the Day 2 hand-tracing budget from item 1. Each route OSM lacks costs roughly 30-45 min of waypoint dropping in geojson.io plus snapping.
+- Budget Day 2 for tracing all 12 routes. Each costs roughly 30-45 min of waypoint dropping in geojson.io plus snapping; `out` and `back` of a color share most waypoints, so the second direction is faster.
 
-**Block done when:** every row except #6 has an answer written down; the 10 trips exist as data; the OSM coverage table is in `data/README.md`.
+**Block done when:** every row except #6 has an answer written down (or is dropped); the 10 trips exist as data.
 
 ## Day 1, rest of day: Scaffold
 
@@ -43,7 +43,7 @@ Goal: green CI on a PR with the required POST/GET working end to end. No planner
 
 **Day 1 done when:** the open-items block is done; `docker compose up` works with no manual steps beyond the future seed command; checklist items 2, 3, 4 pass; CI green on the PR; deliberately failing test turns CI red then green (item 11).
 
-**Risk:** the open-items block eats the day. Mitigation: if it runs long, finish items 1 and 4 (OSM coverage and the 10 trips) and defer the rest of the pins to the start of Day 2; the scaffold must not slip, since Day 2 depends on it.
+**Risk:** the open-items block eats the day. Mitigation: if it runs long, finish item 4 (the 10 trips) and defer the rest of the pins to the start of Day 2; the scaffold must not slip, since Day 2 depends on it.
 
 ## Day 2: Data pipeline, planner and API (heaviest)
 
@@ -51,10 +51,8 @@ Goal: 12 valid route records in the database and `/api/plan` returning real answ
 
 **Track A: route data (morning)**
 
-- `data/fetch_osm.py`: Overpass query (bbox converted to S,W,N,E), name normalization, override file, way stitching with 50 m break check, stop pairing (stop + platform), 12-line coverage report, writes `from_osm.geojson`.
-- `data/raw/waypoints.csv` for every route OSM lacks or breaks, then `data/snap_routes.py` (OSRM, offline) writing `from_traced.geojson`.
-- `data/build_routes.py`: OSM-first, `prefer_traced.txt` override, fails if any of the 12 is missing.
-- `data/validate.py`: all Section 9.4 checks plus the 30 m near-duplicate stop warning; wire into CI for real.
+- `data/raw/waypoints.csv` for all 12 routes, then `data/snap_routes.py` (OSRM, offline) writing `routes.geojson` directly; fails if any of the 12 has no waypoints.
+- `data/validate.py`: all Section 9.3 checks plus the 30 m near-duplicate stop warning; wire into CI for real.
 - `data/seed.py`: one transaction, FK-safe order, never touches `report`; confirm re-run is safe.
 - Tests in `tests/data/` for validate failures (seq gap, out-of-bbox, stop ID collision, line gap, missing property).
 - Start `data/README.md` provenance table as routes land.
@@ -69,9 +67,9 @@ Goal: 12 valid route records in the database and `/api/plan` returning real answ
 - Planner unit tests with a tiny fixture graph (no Postgres); API tests for routes, stops, plan and the 503/200 split when the DB is down.
 - First run of `tests/test_trips.py` over the 10 trips; record raw results, do not tune yet.
 
-**Done when:** `build_routes.py` and `validate.py` pass with all 12 IDs; checklist items 5, 6, 7, 8, 10, 14, 15 pass; the 10 trips run and results are recorded.
+**Done when:** `snap_routes.py` and `validate.py` pass with all 12 IDs; checklist items 5, 6, 7, 8, 10, 14 pass; the 10 trips run and results are recorded.
 
-**Risk:** OSM coverage is poor and most routes need tracing. Mitigation: trace the highest-traffic routes first, and keep the rest as the next candidates. If Track A overruns, stop at "all 12 present and valid" and push planner polish to Day 3 morning.
+**Risk:** tracing 12 routes eats the morning. Mitigation: trace `out` first, derive `back` by reversing the waypoints and adjusting where the return road differs. If Track A overruns, stop at "all 12 present and valid" and push planner polish to Day 3 morning.
 
 ## Day 3: Tune, map, measure, document, ship (heaviest)
 
@@ -79,7 +77,7 @@ Goal: checklist passes and the PR is mergeable.
 
 Morning, make it correct:
 
-- Tune `TRANSFER_PENALTY_KM` and `WALK_COST_FACTOR` against the 10 trips (closes open item #6); fix data gaps (add via waypoints, adjust `prefer_traced.txt`) rather than bending the cost model. Need at least 8 of 10; list failures as known data gaps.
+- Tune `TRANSFER_PENALTY_KM` and `WALK_COST_FACTOR` against the 10 trips (closes open item #6); fix data gaps (add via waypoints, re-run snap) rather than bending the cost model. Need at least 8 of 10; list failures as known data gaps.
 - Checklist item 9: stop the DB container; `/api/plan` 200, `/api/reports` 503, `/health` `database: down`.
 
 Midday, front end:
@@ -90,14 +88,14 @@ Midday, front end:
 Afternoon, measure and document:
 
 - Docs: finish `README.md` (screenshot, confirm commands and endpoint table against `/docs`), `docs/ARCHITECTURE.md` (diagram plus planner definition), `docs/DECISIONS.md` (every Section 3 tool and every Section 15 cut: what, why, rejected alternative, 3 lines), `data/README.md` (provenance, fetch date, known gaps).
-- Run the full Section 14 checklist (items 1-15) against a running stack; fix SPEC or code where they disagree.
+- Run the full Section 14 checklist (items 1-14) against a running stack; fix SPEC or code where they disagree.
 - Final: CI green, PR description summarizing results, known gaps and measured numbers.
 
-**Done when:** all 15 checklist items pass, NFR-1 to NFR-4 are met or honestly reported as missed, PR is ready for review.
+**Done when:** all 14 checklist items pass, NFR-1 to NFR-4 are met or honestly reported as missed, PR is ready for review.
 
 ## Cut order if time runs short
 
 1. Map page stop-name search (keep map-tap).
-2. Hand-trace remaining routes: only if the shortfall is reported as a known data gap and the "all 12 present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `build_routes.py` requires all 12.
+2. Tracing the remaining routes: only if the shortfall is reported as a known data gap and the "all 12 present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `snap_routes.py` and `validate.py` require all 12.
 
 Never cut: the required POST/GET, validation, tests, Dockerfile, Compose, CI.

@@ -4,8 +4,8 @@ Tracks the open items from `SPEC.md` Section 15. Status: `open`, `answered`, `de
 
 | # | Item | Status | Answer / next step | Lives in |
 |---|---|---|---|---|
-| 1 | Which of the 12 route records exist in OSM | open | Maintainer runs the Section 9.2 Overpass query in Overpass Turbo and exports raw OSM JSON to `data/raw/overpass_export.json`. Then summarize found / missing / broken per route | `data/README.md` |
-| 2 | OSM relations that match by name but not `from`/`to` | deferred | `data/osm_overrides.csv` stays empty (header only `relation_id,route_id`) until item 1 results are reviewed | `data/osm_overrides.csv` |
+| 1 | Which of the 12 route records exist in OSM | dropped | All 12 routes are hand-traced (no OSM route import); see `docs/DECISIONS.md` | n/a |
+| 2 | OSM relations that match by name but not `from`/`to` | dropped | Follows from item 1 | n/a |
 | 3 | Exact pin for each of the 11 named places | open | See pin table below | `data/README.md` |
 | 4 | The 10 test trips and expected colors | open | Written before planner work | `tests/test_trips.py` |
 | 5 | Decisions assumed | answered | See below | `docs/DECISIONS.md` |
@@ -46,5 +46,5 @@ Filled in from the maintainer's list. Target mix: at least 2 single-jeep, at lea
 
 ## Also before publishing
 
-- Read the ODbL terms on the OpenStreetMap copyright page (SPEC Section 13) before the repository is made public.
+- Read the ODbL terms on the OpenStreetMap copyright page (SPEC Section 13) before the repository is made public. `routes.geojson` line geometry comes from OSRM on OSM road data.
 - Pre-flight: Docker, Compose, Python, `git` and a GitHub repo with Actions enabled.

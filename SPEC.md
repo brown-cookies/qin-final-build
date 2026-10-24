@@ -47,7 +47,7 @@ FastAPI app
         v                         | loaded once at startup
 PostgreSQL  (route, stop, route_stop, report)
 
-Offline (not at runtime):  OSM (Overpass) -> fetch_osm.py, or waypoints.csv -> snap_routes.py (OSRM)  ->  build_routes.py -> routes.geojson -> seed.py -> PostgreSQL   (Section 9)
+Offline (not at runtime):  waypoints.csv -> snap_routes.py (OSRM)  ->  routes.geojson -> validate.py -> seed.py -> PostgreSQL   (Section 9)
 ```
 
 Rules:
@@ -69,8 +69,7 @@ Rules:
 | Tests | pytest | Required | Chosen |
 | Packaging | Docker + Compose | Required | Chosen |
 | CI | GitHub Actions with a Postgres service container | Required | Chosen |
-| Route data (source A) | OpenStreetMap via the Overpass API (offline script only) | Existing jeepney route relations are imported first, so less has to be traced by hand | Chosen |
-| Route snapping (source B) | OSRM public server (offline script only) | Snaps hand-traced waypoints to real roads; never called at runtime | Chosen |
+| Route snapping | OSRM public server (offline script only) | Snaps hand-traced waypoints to real roads; never called at runtime. Replaces an OSM/Overpass route import, which was cut (Section 15) | Chosen |
 
 Versions are pinned in `requirements.txt` and the Dockerfile, not duplicated here.
 
@@ -80,8 +79,8 @@ Nothing is built. Route data does not exist anywhere and must be created (Sectio
 
 | Day | Work | Done when |
 |---|---|---|
-| 1 | Repo skeleton, Docker/Compose, `sql/schema.sql`, `queries.py`, `/health`, reports POST/GET, tests, CI. Check OSM coverage with Overpass Turbo (Section 9.2), then hand-trace only the routes OSM lacks | CI is green on a PR; every one of the 12 route records is either found in OSM or has waypoints |
-| 2 | `fetch_osm.py`, `snap_routes.py`, `build_routes.py`, `validate.py`, `seed.py`, routes/stops endpoints, planner and `/api/plan`, planner tests | The 10 test trips (Section 11) run and results are recorded |
+| 1 | Repo skeleton, Docker/Compose, `sql/schema.sql`, `queries.py`, `/health`, reports POST/GET, tests, CI. Start dropping waypoints for the 12 routes (Section 9.2) | CI is green on a PR; waypoints started |
+| 2 | `snap_routes.py`, `validate.py`, `seed.py`, routes/stops endpoints, planner and `/api/plan`, planner tests | All 12 routes have waypoints and validate; the 10 test trips (Section 11) run and results are recorded |
 | 3 | Map page, docs (README, ARCHITECTURE, DECISIONS, data/README), final checklist, PR | Section 14 checklist passes |
 
 If Day 2 slips, cut the map page's stop search first and keep map-tap only.
@@ -209,16 +208,16 @@ route
   direction  text  not null     -- 'out' | 'back'
   name       text  not null     -- 'Villa - Pampang' (from the Section 7 registry)
   line       jsonb not null     -- [[lng,lat], ...] snapped road line
-  source     text  not null     -- 'osm' | 'memory-traced'
+  source     text  not null     -- always 'memory-traced'
   verified_on date null
-  osm_relation_id bigint null   -- set only when source = 'osm'
+  osm_relation_id bigint null   -- always null (no OSM import)
 
 stop
   stop_id    text PK
   name       text not null
   lat        double precision not null
   lng        double precision not null
-  osm_node_id bigint null       -- set only for stops taken from OSM
+  osm_node_id bigint null       -- always null (no OSM import)
 
 route_stop
   route_id   text FK -> route
@@ -241,17 +240,15 @@ Relationships: a route has many `route_stop` rows; a stop appears on many routes
 
 ## 9. Route Data Pipeline
 
-Data is the project's hardest part, so it is a contract, not a side note. Route data has two possible sources, **OpenStreetMap (OSM)** and **hand-traced waypoints**. Both are converted into the same intermediate format, so validate, seed and the planner never care where a route came from.
+Data is the project's hardest part, so it is a contract, not a side note. All 12 route records are **hand-traced from memory as waypoints** and snapped to roads by OSRM. There is no OSM route import (cut, Section 15): OSM coverage of Angeles jeepney routes was never confirmed, and a second source would need merge, override and precedence logic that 12 routes do not justify.
 
 ```
-OSM (Overpass) -> fetch_osm.py     -> from_osm.geojson    \
-                                                            -> build_routes.py -> routes.geojson -> validate.py -> seed.py -> PostgreSQL
-waypoints.csv  -> snap_routes.py   -> from_traced.geojson /
+waypoints.csv  -> snap_routes.py (OSRM) -> routes.geojson (committed) -> validate.py -> seed.py -> PostgreSQL
 ```
 
 ### 9.1 Contract: the route Feature
 
-`from_osm.geojson`, `from_traced.geojson` and `routes.geojson` are all GeoJSON FeatureCollections whose Features have this shape (one Feature per route record, 12 in the final file):
+`routes.geojson` is a GeoJSON FeatureCollection whose Features have this shape (one Feature per route record, 12 in the final file):
 
 ```json
 {
@@ -262,51 +259,19 @@ waypoints.csv  -> snap_routes.py   -> from_traced.geojson /
     "color": "yellow",
     "direction": "out",
     "name": "Villa - Pampang",
-    "source": "osm",
+    "source": "memory-traced",
     "verified_on": null,
-    "osm_relation_id": 0,
+    "osm_relation_id": null,
     "stops": [
-      {"stop_id": "example_stop", "name": "Example Stop", "lat": 15.16, "lng": 120.59, "osm_node_id": 0}
+      {"stop_id": "example_stop", "name": "Example Stop", "lat": 15.16, "lng": 120.59, "osm_node_id": null}
     ]
   }
 }
 ```
 
-Values above are placeholders. `source` is `osm` or `memory-traced`. `osm_relation_id` and `osm_node_id` are `null` for traced data. Stops are in route order. These properties map one to one onto the `route`, `stop` and `route_stop` columns in Section 8.
+Values above are placeholders. `source` is always `memory-traced`. `osm_relation_id` and `osm_node_id` are always `null`; the columns stay in `sql/schema.sql` so no schema change is needed, and they are the hook if an OSM import is added later. Stops are in route order. These properties map one to one onto the `route`, `stop` and `route_stop` columns in Section 8.
 
-### 9.2 Source A: OpenStreetMap (try this first)
-
-**What OSM data looks like.** The OSM wiki's Philippines page says jeepney routes use `type=route` with `route=bus` (that value covers buses, jeepneys, multicabs and UV Express). Recommended tags are `name` ("A-B"), `ref`, `colour`, `from`, `to`, `via` and `network`. Stops are `highway=bus_stop` or `public_transport=platform` nodes with `share_taxi=yes` for jeepneys, and stop positions are `public_transport=stop_position` nodes. The general Public Transport v2 pattern for a route relation is one relation per direction, with members ordered as stop, platform, stop, platform from first to last stop, followed by the road ways with empty roles. A `route_master` relation, when present, groups the two directions. This is a convention, not a guarantee on every relation, so OSM data is checked (Section 9.4), never trusted blindly. It is not yet known which of the six Angeles routes exist in OSM; Day 1 finds out.
-
-**Steps**
-
-1. **Query Overpass.** Use Overpass Turbo for a first look, then `data/fetch_osm.py` for the repeatable version. The bounding box is the service area in Overpass order (south, west, north, east); this is a different order from `SERVICE_BBOX` in Section 10:
-
-   ```
-   [out:json][timeout:60];
-   relation["type"="route"]["route"~"^(bus|share_taxi|minibus)$"](15.08,120.50,15.22,120.68);
-   out geom;
-   ```
-
-2. **Match each relation to a registry route** (Section 7). Normalize the relation's `name` (lowercase; hyphen, en dash and em dash all become `-`; collapse spaces) and compare it with the registry names. `data/osm_overrides.csv` (`relation_id,route_id`) always wins and is how you pair relations whose names differ or are missing.
-3. **Convert using this mapping:**
-
-   | Spec field | OSM source | Rule |
-   |---|---|---|
-   | `route_id`, `color` | registry + overrides | Color comes from the registry. If the relation has a `colour` tag that disagrees, print a warning; the registry wins |
-   | `direction` | relation `from` and `to` | `from` equals the registry's first place: `out`; otherwise `back`. If `from` is missing, the override file states the direction |
-   | `line` | member ways (empty role), in relation order | Stitch end to end, flipping a way when needed. Ways marked `hail_and_ride` count as ordinary ways. If two consecutive ways are more than 50 m apart the line is broken, and the route fails validation |
-   | `stops` | members with role `stop` or `platform` | A `stop` followed by its `platform` is one stop; use the platform's name and position, else the stop position's. Stops with no `name` are dropped with a warning |
-   | `stop_id` | slug of the stop name | Same rule as Section 7: the same name on two routes is one stop |
-   | `osm_relation_id`, `osm_node_id` | element ids | Kept for traceability |
-   | `source` | none | Always `osm` |
-
-4. **Coverage report.** `fetch_osm.py` prints one line per registry route record (12): found or missing, stop count, line connected yes or no. Missing or broken routes go to Source B. It writes the converted routes to `data/routes/from_osm.geojson`.
-5. **Snapshot.** OSM changes over time. `routes.geojson` is a snapshot, and the fetch date is recorded in `data/README.md`.
-
-Conventions above follow the OSM wiki pages "Philippines/Public transportation" and "Tag:route=bus".
-
-### 9.3 Source B: hand-traced waypoints (for routes OSM lacks or has broken)
+### 9.2 Input: hand-traced waypoints
 
 1. **Input (human-made):** `data/raw/waypoints.csv`
 
@@ -317,26 +282,25 @@ Conventions above follow the OSM wiki pages "Philippines/Public transportation" 
    yellow_out,3,Balibago Plaza,15.1620,120.5860,1
    ```
 
-   Rows with `is_stop=1` are named boarding places. Rows with `is_stop=0` are unnamed "via" points that force the snapped line onto the road the jeep really uses. The coordinates above are placeholders. Waypoints are dropped by hand in geojson.io (OpenStreetMap base map), from memory, then exported.
-2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/from_traced.geojson` in the Section 9.1 format with `source: "memory-traced"`. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so a traced line follows real OSM roads.)
+   Rows with `is_stop=1` are named boarding places. Rows with `is_stop=0` are unnamed "via" points that force the snapped line onto the road the jeep really uses. The coordinates above are placeholders. Waypoints are dropped by hand in geojson.io (OpenStreetMap base map), from memory, then exported. `stop_id` is the lowercase slug of the stop name (Section 7), so the same place on two routes becomes one stop.
+2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/routes.geojson` in the Section 9.1 format. It fails if any of the 12 route IDs has no waypoints. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so the line follows real OSM roads.)
 
-### 9.4 Build, validate, seed and provenance
+### 9.3 Validate, seed and provenance
 
-1. **Build:** `data/build_routes.py` writes `data/routes/routes.geojson` (committed). For each of the 12 route IDs it uses the OSM version if it exists and passes validation, otherwise the traced version. A route ID listed in `data/prefer_traced.txt` (one ID per line) always uses the traced version. The build fails if any of the 12 is missing from both sources.
-2. **Validate:** `data/validate.py` fails the build if any of these hold:
+1. **Validate:** `data/validate.py` fails the build if any of these hold:
    - a coordinate is outside the service bounding box;
    - `seq` has gaps or does not start at 1;
    - fewer than 2 stops on a route, or a route missing for any of the 6 colors x 2 directions;
    - the same stop ID has coordinates more than 100 m apart on different routes (a likely naming collision);
-   - a route line has a gap of more than 50 m between consecutive points (a broken OSM stitch);
+   - a route line has a gap of more than 50 m between consecutive points (a bad snap);
    - a stop is more than 100 m from its own route line;
    - a Feature is missing any Section 9.1 property, or two Features share a `route_id`.
 
    Two different stop IDs closer than 30 m produce a warning, not a failure.
-3. **Seed:** `data/seed.py` replaces `route`, `stop`, `route_stop` from `routes.geojson` in one transaction: `DELETE` from `route_stop`, then `route` and `stop`, then `INSERT` `stop`, `route`, `route_stop` (foreign-key order). It never touches `report`.
-4. **Provenance:** `data/README.md` records, per route, the source (`osm` or `memory-traced`), the OSM fetch date and relation ID where relevant, and whether it was ridden or checked on the ground. Unverified routes are listed as known gaps.
+2. **Seed:** `data/seed.py` replaces `route`, `stop`, `route_stop` from `routes.geojson` in one transaction: `DELETE` from `route_stop`, then `route` and `stop`, then `INSERT` `stop`, `route`, `route_stop` (foreign-key order). It never touches `report`.
+3. **Provenance:** `data/README.md` records the snap date and, per route, whether it was ridden or checked on the ground. Unverified routes are listed as known gaps.
 
-Fixing a wrong line: for a traced route, add a via waypoint on the correct road and re-run snap. For an OSM route, either correct it on OpenStreetMap itself (optional, then re-fetch) or list its `route_id` in `data/prefer_traced.txt` and trace it. Then re-run build, validate and seed.
+Fixing a wrong line: add a via waypoint on the correct road and re-run snap. Then re-run validate and seed.
 
 ## 10. Configuration and Tunables
 
@@ -345,7 +309,7 @@ All are environment variables with defaults; none are hardcoded constants.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | set in compose | Postgres connection |
-| `SERVICE_BBOX` | `15.08,15.22,120.50,120.68` | lat_min, lat_max, lng_min, lng_max; requests outside are rejected. Overpass wants a different order (south, west, north, east); `fetch_osm.py` converts it |
+| `SERVICE_BBOX` | `15.08,15.22,120.50,120.68` | lat_min, lat_max, lng_min, lng_max; requests outside are rejected. |
 | `WALK_RADIUS_M` | 500 | Max walk from a point to a stop |
 | `TRANSFER_RADIUS_M` | 100 | Stops within this distance count as one transfer point |
 | `TRANSFER_PENALTY_KM` | 1.0 | Flat cost added each time you board a jeep |
@@ -390,7 +354,7 @@ Status rule: `4xx` means the caller's input is wrong; `5xx` means our fault.
 ## 13. Constraints, Conventions and Documentation Rules
 
 - **Data boundary.** No accounts, no logins, no personal data. A report's optional pin marks a problem location, not the user. No third-party service is called at runtime other than loading OpenStreetMap map tiles in the browser.
-- **Licensing.** OpenStreetMap data and tiles are ODbL / tile-policy bound: attribution on the page and in the README (NFR-4). Route lines and stops imported from OSM live in `routes.geojson`, which makes that file OSM-derived data; the README says so and links to the OSM copyright page, and `source: "osm"` marks which routes are affected. Read the ODbL terms on the OSM site before publishing the repository, since derived databases carry conditions. Google Maps is used only as a memory aid; no Google data is copied into the repository.
+- **Licensing.** OpenStreetMap data and tiles are ODbL / tile-policy bound: attribution on the page and in the README (NFR-4). Route line geometry in `routes.geojson` comes from OSRM, which runs on OSM road data; the README says so and links to the OSM copyright page. Stop positions are placed by hand. Read the ODbL terms on the OSM site before publishing the repository, since derived databases carry conditions. Google Maps is used only as a memory aid; no Google data is copied into the repository.
 - **Secrets.** Credentials come from environment variables; nothing sensitive is committed.
 - **SQL rules (no ORM).** Every query uses driver parameters (`%s` placeholders); user input is never formatted or concatenated into SQL text. The stop search passes `q` as a parameter (`name ILIKE '%' || %s || '%'`). Each multi-statement write (the seed) runs in one transaction. Reads in `queries.py` return plain dicts or tuples, and Pydantic models in `schemas.py` shape the API response.
 - **Source of truth.** This file governs API shapes, schema and data format. If code and this spec disagree, one of them is a bug and the PR must fix it.
@@ -402,9 +366,8 @@ app/        main.py, config.py, db.py, queries.py, schemas.py
   planner/  graph.py, search.py, steps.py
 sql/        schema.sql
 web/        index.html, map.js, style.css
-data/       raw/waypoints.csv, osm_overrides.csv, prefer_traced.txt,
-            routes/from_osm.geojson, routes/from_traced.geojson, routes/routes.geojson,
-            fetch_osm.py, snap_routes.py, build_routes.py, validate.py, seed.py, README.md
+data/       raw/waypoints.csv, routes/routes.geojson,
+            snap_routes.py, validate.py, seed.py, README.md
 tests/      api/, planner/, data/, test_trips.py
 docs/       README.md (or root), ARCHITECTURE.md, DECISIONS.md
 Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
@@ -428,8 +391,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 11. Push a deliberately failing test: CI fails. Fix it: CI passes.
 12. Run `tests/test_trips.py`: at least 8 of 10 trips pass; failures are listed in the docs as known data gaps.
 13. Compare README's endpoint table to `/docs`: every endpoint matches. Every Section 3 tool has a `DECISIONS.md` entry.
-14. Run `fetch_osm.py`: it prints a coverage line for each of the 12 route records (found or missing, stop count, line connected). Any route marked found has `source: "osm"` and a non-null `osm_relation_id` in `from_osm.geojson`.
-15. Run `build_routes.py` and `validate.py` with one route taken from OSM and one hand-traced: both appear in `routes.geojson`, all 12 IDs are present, and validation passes. Then list an OSM route in `prefer_traced.txt` and confirm the build switches it to the traced version.
+14. Run `snap_routes.py` then `validate.py`: `routes.geojson` holds all 12 route IDs, each with `source: "memory-traced"`, and validation passes. Remove one route's rows from `waypoints.csv` and re-run: `snap_routes.py` fails naming the missing ID.
 
 | Requirement | Verified by |
 |---|---|
@@ -438,7 +400,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 | FR-4 | 6 |
 | FR-5 | 2, 3 |
 | FR-6 | 2, 4 |
-| FR-7 | 1, 10, 14, 15 |
+| FR-7 | 1, 10, 14 |
 | FR-8 | 1 |
 | FR-9 | 1, 9 |
 | FR-10 | 3, 8 |
@@ -463,6 +425,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 | Alembic migrations | Drop the volume and re-seed |
 | Self-hosted OSRM | The public server is used once, offline |
 | Tagalog labels | English first |
+| OSM/Overpass route import (`fetch_osm.py`, `build_routes.py`, overrides, `prefer_traced.txt`) | OSM coverage was never confirmed; a second source needs merge and precedence logic that 12 routes do not justify. All 12 are traced; the `osm_*` columns stay null |
 
 **Decisions assumed (change before Day 1 if wrong):**
 
@@ -473,8 +436,6 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 
 **Open items:**
 
-- Which of the 12 route records exist in OSM: found out on Day 1 with the Section 9.2 query. The coverage result decides how much hand-tracing is needed; record it in `data/README.md`.
-- OSM relations that match a route by name but not by `from`/`to`: resolved case by case in `data/osm_overrides.csv`.
 - `TRANSFER_PENALTY_KM` and `WALK_COST_FACTOR` final values: set after the first run of the 10 test trips.
 - Exact pin for each named place in the Section 7 registry (Villa, Pampang, Pandan, Checkpoint, Holy, Highway, Balibago, Sapang Bato, Angeles, Main Gate, Friendship): decide the real boarding spot for each and write it in `data/README.md`. "Highway" and "Angeles" are broad names, so pick the actual terminal or main stop you mean.
 - The 10 test trips and their expected colors: write them before building the planner, so the planner is tuned against a fixed list.
