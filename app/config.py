@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Mapping, Optional
 
-GRAPH_MODES = ("cached", "rebuild")
-
 
 class ConfigError(ValueError):
     """Raised for an invalid environment value; startup turns it into a log line and exit."""
@@ -21,7 +19,6 @@ class Settings:
     transfer_radius_m: float
     transfer_penalty_km: float
     walk_cost_factor: float
-    graph_mode: str
     # Not in SPEC Section 10: bounds every wait for a pooled connection so a dead DB
     # yields 503 instead of a hang.
     db_pool_timeout_s: float
@@ -55,9 +52,6 @@ def _bbox(raw: str) -> tuple:
 
 def load_settings(env: Optional[Mapping[str, str]] = None) -> Settings:
     env = os.environ if env is None else env
-    graph_mode = env.get("GRAPH_MODE", "cached")
-    if graph_mode not in GRAPH_MODES:
-        raise ConfigError(f"GRAPH_MODE must be one of {', '.join(GRAPH_MODES)}, got {graph_mode!r}")
     return Settings(
         # Local dev default only; compose and CI set their own.
         database_url=env.get("DATABASE_URL", "postgresql://biyahe:biyahe@localhost:5432/biyahe"),
@@ -66,7 +60,6 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> Settings:
         transfer_radius_m=_number(env, "TRANSFER_RADIUS_M", "100"),
         transfer_penalty_km=_number(env, "TRANSFER_PENALTY_KM", "1.0"),
         walk_cost_factor=_number(env, "WALK_COST_FACTOR", "2.0"),
-        graph_mode=graph_mode,
         db_pool_timeout_s=_number(env, "DB_POOL_TIMEOUT_S", "3"),
     )
 
