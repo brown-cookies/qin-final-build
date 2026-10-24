@@ -1,0 +1,59 @@
+route_id,seq,name,lat,lng,is_stop
+yellow_out,1,Yellow Terminal,15.1231986,120.5996147,1
+yellow_out,2,,15.1229894,120.599476,0
+yellow_out,3,Chevalier School,15.1236791,120.5989952,1
+yellow_out,4,San Pedro Street,15.1249151,120.5983233,1
+yellow_out,5,Sacred Heart Hospital,15.1252814,120.5981761,1
+yellow_out,6,Jollibee San Jacinto Street,15.125657,120.5980815,1
+yellow_out,7,Rotonda Circle near Jollibee San Jacinto,15.1258533,120.5979917,1
+yellow_out,8,Rotonda Circle near Santo Rosario Street,15.125858,120.597755,1
+yellow_out,9,Brake and Clutch Bonding Shop,15.1260263,120.5975559,1
+yellow_out,10,Caltex near Super 8,15.126597,120.5971737,1
+yellow_out,11,Super 8,15.1270069,120.5969341,1
+yellow_out,12,Korean Hanaro Mart,15.1276446,120.5965578,1
+yellow_out,13,Hungry Neighbors,15.1279586,120.596362,1
+yellow_out,14,J&T Express,15.1286675,120.5959608,1
+yellow_out,15,Dominican Children's Clinic,15.1294236,120.5955089,1
+yellow_out,16,San Jose Street,15.1301179,120.595074,1
+yellow_out,17,Dadad's Peri Peri Chicken,15.1307243,120.5945893,1
+yellow_out,18,M Lhuillier,15.1311091,120.5942259,1
+yellow_out,19,San Jose Chapel,15.1314741,120.5938634,1
+yellow_out,20,Eggs N' Brekky,15.1320757,120.5932952,1
+yellow_out,21,Kickz & Cutz Barbershop,15.1328272,120.5925711,1
+yellow_out,22,Bale Herencia,15.1333142,120.5920887,1
+yellow_out,23,7-Eleven HAU,15.1335559,120.5918528,1
+yellow_out,24,TNC,15.1338754,120.5920996,1
+yellow_out,25,Makimura,15.1345551,120.5925722,1
+yellow_out,26,Grill Mentality,15.1349944,120.5928944,1
+yellow_out,27,7-Eleven near Grill Mentality,15.1359002,120.5915768,1
+yellow_out,28,PLDT Sales and Services,15.1368494,120.5902707,1
+yellow_out,29,BPI-BPO near Puregold,15.1375495,120.5892952,1
+yellow_out,30,Puregold,15.1383778,120.5881579,1
+yellow_out,31,Palengke Rotonda near Jollibee,15.1387397,120.5875507,1
+yellow_out,32,Im Lucky Mart,15.1379576,120.5870625,1
+yellow_out,33,Mac O Bon Snack House,15.137023,120.5865522,1
+yellow_out,34,Landbank,15.1363997,120.5876084,1
+yellow_out,35,Jenra Mall,15.136107,120.5882351,1
+yellow_out,36,Nepo Mall Entrance,15.135582,120.5892873,1
+yellow_out,37,Uncle John's,15.1348104,120.5905549,1
+yellow_out,38,HAU Main Gate,15.134112,120.591292,1
+yellow_out,39,7-Eleven HAU,15.1335373,120.5918376,1
+yellow_out,40,Bale Herencia,15.1332949,120.5920753,1
+yellow_out,41,Kickz & Cutz Barbershop,15.1328037,120.5925492,1
+yellow_out,42,Eggs N' Brekky,15.1320621,120.5932745,1
+yellow_out,43,San Jose Chapel,15.1314606,120.5938498,1
+yellow_out,44,M Lhuillier,15.1310917,120.5942134,1
+yellow_out,45,Dadad's Peri Peri Chicken,15.13071,120.5945717,1
+yellow_out,46,San Jose Street,15.130115,120.5950532,1
+yellow_out,47,Dominican Children's Clinic,15.1294135,120.5954863,1
+yellow_out,48,J&T Express,15.1286554,120.5959392,1
+yellow_out,49,Hungry Neighbors,15.1279468,120.596343,1
+yellow_out,50,Korean Hanaro Mart,15.1276321,120.5965416,1
+yellow_out,51,Super 8,15.1269954,120.5969161,1
+yellow_out,52,Caltex near Super 8,15.1265842,120.5971537,1
+yellow_out,53,Brake and Clutch Bonding Shop,15.1259963,120.5974736,1
+yellow_out,54,301 Street,15.1243981,120.5984441,1
+yellow_out,55,Don Serafin,15.1220913,120.600043,1
+yellow_out,56,SM Telabastagan,15.1214857,120.6005123,1
+yellow_out,57,,15.1215416,120.6005793,0
+yellow_out,58,Petron End Stop,15.1228493,120.599579,1

@@ -27,7 +27,7 @@ Working name. A web app that gives plain-language jeepney directions for Angeles
 **Deliverable.** One repository, delivered as a pull request from a feature branch, containing:
 
 - A FastAPI service with one POST endpoint that validates its input with Pydantic and writes to PostgreSQL (`POST /api/reports`), and one GET endpoint returning the most recent records (`GET /api/reports`).
-- A trip planner (`GET /api/plan`) over the 12 route records (6 colors x 2 directions).
+- A trip planner (`GET /api/plan`) over the 9 route records (3 two-way colors x 2 directions, plus 3 one-way circular colors).
 - A static map page served by the same service.
 - A pytest suite that passes against a test database, a Dockerfile, a `docker-compose.yml` bringing up API and database, and a GitHub Actions workflow running the tests on every push.
 
@@ -79,8 +79,8 @@ Nothing is built. Route data does not exist anywhere and must be created (Sectio
 
 | Day | Work | Done when |
 |---|---|---|
-| 1 | Repo skeleton, Docker/Compose, `sql/schema.sql`, `queries.py`, `/health`, reports POST/GET, tests, CI. Start dropping waypoints for the 12 routes (Section 9.2) | CI is green on a PR; waypoints started |
-| 2 | `snap_routes.py`, `validate.py`, `seed.py`, routes/stops endpoints, planner and `/api/plan`, planner tests | All 12 routes have waypoints and validate; the 10 test trips (Section 11) run and results are recorded |
+| 1 | Repo skeleton, Docker/Compose, `sql/schema.sql`, `queries.py`, `/health`, reports POST/GET, tests, CI. Start dropping waypoints for the 9 routes (Section 9.2) | CI is green on a PR; waypoints started |
+| 2 | `snap_routes.py`, `validate.py`, `seed.py`, routes/stops endpoints, planner and `/api/plan`, planner tests | All 9 routes have waypoints and validate; the 10 test trips (Section 11) run and results are recorded |
 | 3 | Map page, docs (README, ARCHITECTURE, DECISIONS, data/README), final checklist, PR | Section 14 checklist passes |
 
 If Day 2 slips, cut the map page's stop search first and keep map-tap only.
@@ -91,7 +91,7 @@ Each requirement is pass/fail against a running service.
 
 - **FR-1 Plan a trip.** `GET /api/plan` takes two points and returns ordered steps. A route is found if one exists within the walk radius at both ends (Section 10).
 - **FR-2 Readable steps.** Consecutive ride edges on the same route merge into one ride step. The response includes a one-line `summary` a non-technical user can read.
-- **FR-3 Browse routes.** `GET /api/routes` lists the 12 route records; `GET /api/routes/{route_id}` returns the line and stops as GeoJSON.
+- **FR-3 Browse routes.** `GET /api/routes` lists the 9 route records; `GET /api/routes/{route_id}` returns the line and stops as GeoJSON.
 - **FR-4 Stop search.** `GET /api/stops?q=` returns stops whose name contains `q`, case-insensitive, to fill the map page's pickers.
 - **FR-5 Submit a report (required POST).** `POST /api/reports` validates input with Pydantic and writes one row to PostgreSQL.
 - **FR-6 Recent reports (required GET).** `GET /api/reports?limit=` returns the most recent reports, newest first.
@@ -177,20 +177,20 @@ Returns `[{"stop_id": "dau_terminal", "name": "Dau Terminal", "lat": 15.165, "ln
 
 ## 7. Data Contracts and Schemas
 
-- **Route registry (the fixed set).** One color is exactly one named route, run in two directions:
+- **Route registry (the fixed set).** One color is exactly one named route. Yellow, Purple and Grey are one-way circular routes and have only `out`; Blue, Red and Dark yellow run in two directions:
 
   | Color | Token | Route name | `out` direction | Route IDs |
   |---|---|---|---|---|
-  | Yellow | `yellow` | Villa - Pampang | Villa to Pampang | `yellow_out`, `yellow_back` |
+  | Yellow | `yellow` | Villa - Pampang | Terminal, around the loop, to where the jeep ends (one-way circular; the name is only a label) | `yellow_out` |
   | Blue | `blue` | Pandan - Pampang | Pandan to Pampang | `blue_out`, `blue_back` |
-  | Purple | `purple` | Checkpoint - Holy - Highway | Checkpoint to Highway | `purple_out`, `purple_back` |
-  | Grey | `grey` | Checkpoint - Balibago - Highway | Checkpoint to Highway | `grey_out`, `grey_back` |
+  | Purple | `purple` | Checkpoint - Holy - Highway | Terminal, around the loop, to where the jeep ends (one-way circular) | `purple_out` |
+  | Grey | `grey` | Checkpoint - Balibago - Highway | Terminal, around the loop, to where the jeep ends (one-way circular) | `grey_out` |
   | Red | `red` | Sapang Bato - Angeles | Sapang Bato to Angeles | `red_out`, `red_back` |
   | Dark yellow | `darkyellow` | Main Gate - Friendship | Main Gate to Friendship | `darkyellow_out`, `darkyellow_back` |
 
   `other` is accepted only in reports. Tokens are lowercase and never change.
-- **Direction:** `out` is the route name read left to right (first place to last place); `back` is the reverse. The return trip is its own route record because its roads can differ.
-- **Named places become stops.** Every place in a route's name (for example Holy on Purple, Balibago on Grey) is a named stop on that route. Purple and Grey share the Checkpoint and Highway ends, and Yellow and Blue share Pampang, so those stops must use the same `stop_id` on every route they appear on; that is what creates transfers.
+- **Direction:** `out` is the route name read left to right (first place to last place); `back` is the reverse. The return trip is its own route record because its roads can differ. A one-way circular route (Yellow, Purple, Grey) has only `out`: its single line starts at the terminal and ends where the jeep ends, and it may pass the same real place twice. Both passes are `route_stop` rows with the same `stop_id` and different `seq` (the primary key is `(route_id, seq)`, so no schema change).
+- **Named places become stops.** Every place in a route's name (for example Holy on Purple, Balibago on Grey) is a named stop on that route. Purple and Grey share the Checkpoint and Highway stops, and Yellow and Blue share Pampang, so those stops must use the same `stop_id` on every route they appear on; that is what creates transfers.
 - **Map colors:** defined once in `web/map.js`. Yellow and dark yellow must be visibly different (for example `#FACC15` and `#B8860B`).
 - **Route ID:** `{color}_{direction}`, for example `yellow_out`. Lowercase, permanent. Split on the last underscore to separate color and direction.
 - **Stop ID:** lowercase slug of the stop name, for example `dau_terminal`. The same real place keeps the same ID on every route, which is what makes transfers work.
@@ -240,7 +240,7 @@ Relationships: a route has many `route_stop` rows; a stop appears on many routes
 
 ## 9. Route Data Pipeline
 
-Data is the project's hardest part, so it is a contract, not a side note. All 12 route records are **hand-traced from memory as waypoints** and snapped to roads by OSRM. There is no OSM route import (cut, Section 15): OSM coverage of Angeles jeepney routes was never confirmed, and a second source would need merge, override and precedence logic that 12 routes do not justify.
+Data is the project's hardest part, so it is a contract, not a side note. All 9 route records are **hand-traced from memory as waypoints** and snapped to roads by OSRM. There is no OSM route import (cut, Section 15): OSM coverage of Angeles jeepney routes was never confirmed, and a second source would need merge, override and precedence logic that 9 routes do not justify.
 
 ```
 waypoints.csv  -> snap_routes.py (OSRM) -> routes.geojson (committed) -> validate.py -> seed.py -> PostgreSQL
@@ -248,7 +248,7 @@ waypoints.csv  -> snap_routes.py (OSRM) -> routes.geojson (committed) -> validat
 
 ### 9.1 Contract: the route Feature
 
-`routes.geojson` is a GeoJSON FeatureCollection whose Features have this shape (one Feature per route record, 12 in the final file):
+`routes.geojson` is a GeoJSON FeatureCollection whose Features have this shape (one Feature per route record, 9 in the final file):
 
 ```json
 {
@@ -283,14 +283,14 @@ Values above are placeholders. `source` is always `memory-traced`. `osm_relation
    ```
 
    Rows with `is_stop=1` are named boarding places. Rows with `is_stop=0` are unnamed "via" points that force the snapped line onto the road the jeep really uses. The coordinates above are placeholders. Waypoints are dropped by hand in geojson.io (OpenStreetMap base map), from memory, then exported. `stop_id` is the lowercase slug of the stop name (Section 7), so the same place on two routes becomes one stop.
-2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/routes.geojson` in the Section 9.1 format. It fails if any of the 12 route IDs has no waypoints. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so the line follows real OSM roads.)
+2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/routes.geojson` in the Section 9.1 format. It fails if any registry route ID (Section 7) has no waypoints. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so the line follows real OSM roads.)
 
 ### 9.3 Validate, seed and provenance
 
 1. **Validate:** `data/validate.py` fails the build if any of these hold:
    - a coordinate is outside the service bounding box;
    - `seq` has gaps or does not start at 1;
-   - fewer than 2 stops on a route, or a route missing for any of the 6 colors x 2 directions;
+   - fewer than 2 stops on a route, or a route in the Section 7 registry that is missing (all 6 colors have `out`; only Blue, Red and Dark yellow also have `back`);
    - the same stop ID has coordinates more than 100 m apart on different routes (a likely naming collision);
    - a route line has a gap of more than 50 m between consecutive points (a bad snap);
    - a stop is more than 100 m from its own route line;
@@ -382,7 +382,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 2. `POST /api/reports` with a valid body returns `201`; `GET /api/reports` lists it first.
 3. `POST /api/reports` with an empty message, unknown color, only `lat`, or out-of-area coordinates returns `422` in the Section 12 error shape.
 4. `GET /api/reports?limit=0` and `limit=51` both return `422`.
-5. `GET /api/routes` returns 12 records; `GET /api/routes/yellow_out` returns a line plus at least 2 stops; an unknown ID returns `404`.
+5. `GET /api/routes` returns 9 records; `GET /api/routes/yellow_out` returns a line plus at least 2 stops; an unknown ID returns `404`.
 6. `GET /api/stops?q=` with a lowercase partial name returns matches; empty `q` returns `422`.
 7. A known single-jeep trip returns one ride step; a known transfer trip returns ride, transfer, ride.
 8. A point outside the service area returns `400`; a point far from any stop returns `404 no_stop_nearby`.
@@ -391,7 +391,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 11. Push a deliberately failing test: CI fails. Fix it: CI passes.
 12. Run `tests/test_trips.py`: at least 8 of 10 trips pass; failures are listed in the docs as known data gaps.
 13. Compare README's endpoint table to `/docs`: every endpoint matches. Every Section 3 tool has a `DECISIONS.md` entry.
-14. Run `snap_routes.py` then `validate.py`: `routes.geojson` holds all 12 route IDs, each with `source: "memory-traced"`, and validation passes. Remove one route's rows from `waypoints.csv` and re-run: `snap_routes.py` fails naming the missing ID.
+14. Run `snap_routes.py` then `validate.py`: `routes.geojson` holds all 9 route IDs, each with `source: "memory-traced"`, and validation passes. Remove one route's rows from `waypoints.csv` and re-run: `snap_routes.py` fails naming the missing ID.
 
 | Requirement | Verified by |
 |---|---|
@@ -415,7 +415,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 
 | Cut | Reason |
 |---|---|
-| PostGIS | Plain latitude/longitude and a small distance function are enough for 12 routes; one less extension to run and explain |
+| PostGIS | Plain latitude/longitude and a small distance function are enough for 9 routes; one less extension to run and explain |
 | Redis / response caching | The in-memory graph already removes the slow part; add only if a measured need appears |
 | React / front-end build step | A static page with Leaflet is easier to modify and defend |
 | Accounts, login, rate limiting | No personal data to protect; reports cannot change route data |
@@ -425,11 +425,11 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 | Alembic migrations | Drop the volume and re-seed |
 | Self-hosted OSRM | The public server is used once, offline |
 | Tagalog labels | English first |
-| OSM/Overpass route import (`fetch_osm.py`, `build_routes.py`, overrides, `prefer_traced.txt`) | OSM coverage was never confirmed; a second source needs merge and precedence logic that 12 routes do not justify. All 12 are traced; the `osm_*` columns stay null |
+| OSM/Overpass route import (`fetch_osm.py`, `build_routes.py`, overrides, `prefer_traced.txt`) | OSM coverage was never confirmed; a second source needs merge and precedence logic that 9 routes do not justify. All 9 are traced; the `osm_*` columns stay null |
 
 **Decisions assumed (change before Day 1 if wrong):**
 
-1. **Confirmed:** each color is exactly one named route in two directions (Section 7 registry). Nothing is assumed about variants; if you later find one, give it its own `route_id` and add it to the registry.
+1. **Confirmed:** each color is exactly one named route; Yellow, Purple and Grey are one-way circular (`out` only); Blue, Red and Dark yellow run in two directions (Section 7 registry). Nothing is assumed about variants; if you later find one, give it its own `route_id` and add it to the registry.
 2. The map page is in scope.
 3. English only.
 4. Reports are public immediately.

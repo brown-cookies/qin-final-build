@@ -23,7 +23,7 @@ Also today:
 
 - Read the ODbL terms on the OSM site (SPEC Section 13) before the repo is published; note any conditions.
 - Pre-flight: Docker, Compose, Python, `git` and a GitHub repo with Actions enabled all work; feature branch created.
-- Budget Day 2 for tracing all 12 routes. Each costs roughly 30-45 min of waypoint dropping in geojson.io plus snapping; `out` and `back` of a color share most waypoints, so the second direction is faster.
+- Budget Day 2 for tracing all 9 routes. Each costs roughly 30-45 min of waypoint dropping in geojson.io plus snapping; `out` and `back` of Blue, Red and Dark yellow share most waypoints, so their second direction is faster.
 
 **Block done when:** every row except #6 has an answer written down (or is dropped); the 10 trips exist as data.
 
@@ -47,11 +47,11 @@ Goal: green CI on a PR with the required POST/GET working end to end. No planner
 
 ## Day 2: Data pipeline, planner and API (heaviest)
 
-Goal: 12 valid route records in the database and `/api/plan` returning real answers. Split in two tracks; do data first since it is the critical path.
+Goal: 9 valid route records in the database and `/api/plan` returning real answers. Split in two tracks; do data first since it is the critical path.
 
 **Track A: route data (morning)**
 
-- `data/raw/waypoints.csv` for all 12 routes, then `data/snap_routes.py` (OSRM, offline) writing `routes.geojson` directly; fails if any of the 12 has no waypoints.
+- `data/raw/waypoints.csv` for all 9 routes, then `data/snap_routes.py` (OSRM, offline) writing `routes.geojson` directly; fails if any registry route has no waypoints.
 - `data/validate.py`: all Section 9.3 checks plus the 30 m near-duplicate stop warning; wire into CI for real.
 - `data/seed.py`: one transaction, FK-safe order, never touches `report`; confirm re-run is safe.
 - Tests in `tests/data/` for validate failures (seq gap, out-of-bbox, stop ID collision, line gap, missing property).
@@ -67,9 +67,9 @@ Goal: 12 valid route records in the database and `/api/plan` returning real answ
 - Planner unit tests with a tiny fixture graph (no Postgres); API tests for routes, stops, plan and the 503/200 split when the DB is down.
 - First run of `tests/test_trips.py` over the 10 trips; record raw results, do not tune yet.
 
-**Done when:** `snap_routes.py` and `validate.py` pass with all 12 IDs; checklist items 5, 6, 7, 8, 10, 14 pass; the 10 trips run and results are recorded.
+**Done when:** `snap_routes.py` and `validate.py` pass with all 9 IDs; checklist items 5, 6, 7, 8, 10, 14 pass; the 10 trips run and results are recorded.
 
-**Risk:** tracing 12 routes eats the morning. Mitigation: trace `out` first, derive `back` by reversing the waypoints and adjusting where the return road differs. If Track A overruns, stop at "all 12 present and valid" and push planner polish to Day 3 morning.
+**Risk:** tracing 9 routes eats the morning. Mitigation: trace `out` first; for Blue, Red and Dark yellow derive `back` by reversing the waypoints and adjusting where the return road differs (Yellow, Purple, Grey have no `back`). If Track A overruns, stop at "all 9 present and valid" and push planner polish to Day 3 morning.
 
 ## Day 3: Tune, map, measure, document, ship (heaviest)
 
@@ -96,6 +96,6 @@ Afternoon, measure and document:
 ## Cut order if time runs short
 
 1. Map page stop-name search (keep map-tap).
-2. Tracing the remaining routes: only if the shortfall is reported as a known data gap and the "all 12 present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `snap_routes.py` and `validate.py` require all 12.
+2. Tracing the remaining routes: only if the shortfall is reported as a known data gap and the "all present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `snap_routes.py` and `validate.py` require every registry route.
 
 Never cut: the required POST/GET, validation, tests, Dockerfile, Compose, CI.
