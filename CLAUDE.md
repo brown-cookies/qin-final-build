@@ -24,7 +24,6 @@ data/       raw/waypoints.csv, osm_overrides.csv, prefer_traced.txt,
             routes/{from_osm,from_traced,routes}.geojson,
             fetch_osm.py, snap_routes.py, build_routes.py, validate.py, seed.py, README.md
 tests/      api/, planner/, data/, test_trips.py
-bench/      plan_bench.py
 docs/       ARCHITECTURE.md, DECISIONS.md, OPEN_ITEMS.md
 ```
 
@@ -32,7 +31,7 @@ docs/       ARCHITECTURE.md, DECISIONS.md, OPEN_ITEMS.md
 
 1. **Routers are thin.** `app/api/*` only parse input, call `planner/` or `queries.py`, shape the response. No logic.
 2. **SQL only in `app/queries.py` and `sql/schema.sql`.** Always driver parameters (`%s`). Never format or concatenate user input into SQL. Stop search: `name ILIKE '%' || %s || '%'`. Multi-statement writes (seed) run in one transaction.
-3. **`planner/` never touches the DB.** It takes plain data. Graph is built once at startup and kept in memory (`GRAPH_MODE=cached`; `rebuild` is benchmark-only).
+3. **`planner/` never touches the DB.** It takes plain data. Graph is built once at startup and kept in memory.
 4. **Route data is read-only at runtime.** Only `report` rows are user-written. `seed.py` replaces `route`/`stop`/`route_stop`, never `report`, and is re-runnable.
 5. **One error shape everywhere**, including validation errors: `{"error": "<code>", "message": "<plain text>"}`. Codes and statuses are in SPEC Section 12. 4xx = caller's fault, 5xx = ours. Unhandled exceptions: `500 internal_error`, log details, never return them.
 6. **Pydantic models live in `app/schemas.py`**, one per request/response. Reject unknown request fields.
@@ -76,13 +75,12 @@ pytest                                 # needs a Postgres test DB: TEST_DATABASE
                                        # (default postgresql://biyahe:biyahe@localhost:5432/biyahe_test; created if
                                        # missing; `docker compose up db` provides the server)
 python data/validate.py                # Day 1 stub (exits 0); real checks Day 2; also runs in CI
-# bench: Day 3, not yet available (bench/plan_bench.py, run with GRAPH_MODE=cached then rebuild)
 ```
 
 ## Working conventions
 
 - Work on a feature branch; deliver as one PR. CI (tests + `validate.py`) must be green.
 - Match surrounding code style. Keep comments sparse and explain why, not what.
-- Docs set: `README.md`, `SPEC.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (per tool and per cut: what, why, rejected alternative, 3 lines; plus measured results), `data/README.md`. Every SPEC Section 3 tool needs a `DECISIONS.md` entry; every endpoint needs a README row (NFR-4).
+- Docs set: `README.md`, `SPEC.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` (per tool and per cut: what, why, rejected alternative, 3 lines; plus measured results), `data/README.md`. Every SPEC Section 3 tool needs a `DECISIONS.md` entry; every endpoint needs a README row (NFR-3).
 - Report measured numbers as measured, with hardware stated. Do not adjust a missed target.
 - Done = SPEC Section 14 checklist passes. Check items against a running service, not just tests.

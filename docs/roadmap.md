@@ -2,7 +2,7 @@
 
 Source: `SPEC.md`. Plan: three calendar days. Day 1 starts with the open-items register (Day 0 block, morning) and then builds the scaffold. Days 2 and 3 carry the weight.
 
-**Deviation from SPEC Section 4 (SPEC left unchanged by decision).** The spec puts the OSM coverage check and hand-tracing on Day 1. Here the coverage check and decisions run first thing on Day 1 (they are open items), the heavy data and planner work moves to Day 2, and tuning, map, benchmark and docs go on Day 3. `SPEC.md` Section 4 is not edited, so it and this file disagree on the day split; this file is the working plan. Everything else in the spec still governs.
+**Deviation from SPEC Section 4 (SPEC left unchanged by decision).** The spec puts the OSM coverage check and hand-tracing on Day 1. Here the coverage check and decisions run first thing on Day 1 (they are open items), the heavy data and planner work moves to Day 2, and tuning, map and docs go on Day 3. `SPEC.md` Section 4 is not edited, so it and this file disagree on the day split; this file is the working plan. Everything else in the spec still governs.
 
 Effort split (rough): Day 1 ~30% (Day 0 block ~10% + scaffold ~20%), Day 2 ~35%, Day 3 ~35%.
 
@@ -69,7 +69,7 @@ Goal: 12 valid route records in the database and `/api/plan` returning real answ
 - Planner unit tests with a tiny fixture graph (no Postgres); API tests for routes, stops, plan and the 503/200 split when the DB is down.
 - First run of `tests/test_trips.py` over the 10 trips; record raw results, do not tune yet.
 
-**Done when:** `build_routes.py` and `validate.py` pass with all 12 IDs; checklist items 5, 6, 7, 8, 10, 15, 16 pass; the 10 trips run and results are recorded.
+**Done when:** `build_routes.py` and `validate.py` pass with all 12 IDs; checklist items 5, 6, 7, 8, 10, 14, 15 pass; the 10 trips run and results are recorded.
 
 **Risk:** OSM coverage is poor and most routes need tracing. Mitigation: trace the highest-traffic routes first, and keep the rest as the next candidates. If Track A overruns, stop at "all 12 present and valid" and push planner polish to Day 3 morning.
 
@@ -84,23 +84,20 @@ Morning, make it correct:
 
 Midday, front end:
 
-- `web/index.html`, `web/map.js`, `web/style.css`: Leaflet with OSM tiles, six route lines in colors defined once in `map.js` (Yellow `#FACC15` vs dark yellow `#B8860B` visibly different), origin/destination by map tap, stop-name search pickers, plan steps shown, OSM attribution on the page (NFR-5).
+- `web/index.html`, `web/map.js`, `web/style.css`: Leaflet with OSM tiles, six route lines in colors defined once in `map.js` (Yellow `#FACC15` vs dark yellow `#B8860B` visibly different), origin/destination by map tap, stop-name search pickers, plan steps shown, OSM attribution on the page (NFR-4).
 - Served as static files by the same FastAPI service. Cut stop search first if time is short; keep map-tap.
 
 Afternoon, measure and document:
 
-- `bench/plan_bench.py`: 200 random stop-pair requests, p50/p95; run in `cached` then `rebuild`; record both numbers, the ratio and the hardware in `docs/DECISIONS.md`. Report real numbers even if p95 misses 200 ms.
-- One Lighthouse run on a phone profile, result saved (target under 3 s).
 - Docs: finish `README.md` (screenshot, confirm commands and endpoint table against `/docs`), `docs/ARCHITECTURE.md` (diagram plus planner definition), `docs/DECISIONS.md` (every Section 3 tool and every Section 15 cut: what, why, rejected alternative, 3 lines), `data/README.md` (provenance, fetch date, known gaps).
-- Run the full Section 14 checklist (items 1-16) against a running stack; fix SPEC or code where they disagree.
+- Run the full Section 14 checklist (items 1-15) against a running stack; fix SPEC or code where they disagree.
 - Final: CI green, PR description summarizing results, known gaps and measured numbers.
 
-**Done when:** all 16 checklist items pass, NFR-1 to NFR-5 are met or honestly reported as missed, PR is ready for review.
+**Done when:** all 15 checklist items pass, NFR-1 to NFR-4 are met or honestly reported as missed, PR is ready for review.
 
 ## Cut order if time runs short
 
 1. Map page stop-name search (keep map-tap).
-2. Lighthouse run (record as not done).
-3. Hand-trace remaining routes: only if the shortfall is reported as a known data gap and the "all 12 present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `build_routes.py` requires all 12.
+2. Hand-trace remaining routes: only if the shortfall is reported as a known data gap and the "all 12 present" rule is explicitly waived in SPEC. Otherwise this one does not get cut, because `build_routes.py` requires all 12.
 
 Never cut: the required POST/GET, validation, tests, Dockerfile, Compose, CI.

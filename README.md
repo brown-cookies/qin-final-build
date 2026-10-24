@@ -29,7 +29,7 @@ Requires Docker with Compose.
 
 ```bash
 docker compose up                                  # API + PostgreSQL
-docker compose run --rm api python -m data.seed    # one-time: load route data (_TODO: confirm command_)
+docker compose run --rm api python -m data.seed    # one-time: load route data (not available yet, Day 2)
 ```
 
 Then open:
@@ -86,7 +86,6 @@ Environment variables, all with defaults:
 | `TRANSFER_RADIUS_M` | `100` | Stops within this distance count as one transfer point |
 | `TRANSFER_PENALTY_KM` | `1.0` | Flat cost each time you board a jeep |
 | `WALK_COST_FACTOR` | `2.0` | Walking costs this many times riding, per km |
-| `GRAPH_MODE` | `cached` | `cached` builds the graph at startup; `rebuild` per request (benchmark only) |
 
 ## How it works
 
@@ -94,7 +93,7 @@ FastAPI serves a JSON API and a static Leaflet map page. A pure-Python planner (
 
 ## Route data
 
-Route data is created offline and committed as `data/routes/routes.geojson`. Routes come from OpenStreetMap where it has them, and from hand-traced waypoints snapped to roads with OSRM where it does not. Provenance per route, the OSM fetch date and known gaps are in [data/README.md](data/README.md).
+Route data is created offline and committed as `data/routes/routes.geojson`. Routes come from OpenStreetMap where it has them, and from hand-traced waypoints snapped to roads with OSRM where it does not. Provenance per route, the OSM fetch date and known gaps will be in `data/README.md` (planned, not written yet).
 
 Re-seeding is safe and never touches reports.
 
