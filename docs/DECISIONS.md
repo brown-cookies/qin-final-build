@@ -17,3 +17,35 @@ Per tool and per cut: what, why, rejected alternative. Measured results are adde
 - What: validate first, apply the idempotent schema, then DELETE `route_stop`, `route`, `stop` and INSERT `stop`, `route`, `route_stop` in one transaction; one `stop` row per `stop_id`, first occurrence in sorted `route_id` order then list order wins.
 - Why: re-runnable, atomic, deterministic regardless of file order; `report` has no foreign key to `route` or `stop` and is never touched, so replacement can never be blocked. A future foreign key from `report` must not block replacement.
 - Rejected: upsert per row (leaves stale routes behind) and TRUNCATE (also locks and hides partial failure); SQL inside `seed.py` (breaks hard rule 2).
+
+## Planner (`app/planner/`)
+- What: Dijkstra with `heapq` over an in-memory graph with `at(stop)` and `on(route, seq)` nodes; board costs `TRANSFER_PENALTY_KM`, ride costs straight-line km, walk edges between stops within `TRANSFER_RADIUS_M` cost km x `WALK_COST_FACTOR`; the graph is built once at startup from plain data and the planner imports no DB or config code.
+- Why: boarding as a node-to-node edge makes the transfer penalty fall out of the shortest-path cost, a circular route that passes a stop twice needs no special case, and unit tests run on a hand-made graph with no Postgres.
+- Rejected: a stop-to-stop graph with a penalty on route change (needs path state in Dijkstra) and networkx (new dependency for 9 routes).
+
+## Virtual start and end, and the walk guard (`app/planner/search.py`)
+- What: the query start and end are handled inside `find_path` as synthetic edges to stops within `WALK_RADIUS_M`, never stored in the shared graph; a stop reached by a walk edge can only board or finish, so walks do not chain past `TRANSFER_RADIUS_M`.
+- Why: concurrent requests run in threads, so mutating shared adjacency lists would corrupt later queries; without the guard a run of 60 m hops could beat a ride, and the SPEC only intends one transfer walk.
+- Rejected: adding and removing temporary nodes on the graph, and limiting chaining in `Graph` (breaks the plain edge-kind test).
+
+## Route data at startup and the database-down split (`app/main.py`, `app/api/`)
+- What: `load_route_data` reads `route`, `stop`, `route_stop` once into `app.state` (graph, routes with lines, stops); `/api/plan`, `/api/routes` and `/api/routes/{id}` serve only from it, `/api/stops` runs the ILIKE query and falls back to the in-memory list with the same semantics when the database is unreachable.
+- Why: SPEC Section 12 needs these endpoints to keep working when the database drops, and route data is read-only at runtime, so a reload is a restart after a re-seed.
+- Rejected: a reload endpoint (a runtime write path SPEC does not have) and per-request route queries (the endpoints would fail with the database).
+
+## Stop search (`app/queries.py`, `app/api/stops.py`)
+- What: `name ILIKE '%' || %s || '%'` with `\`, `%` and `_` escaped so `q` is a literal substring; `q` is stripped, 1 to 100 characters, no NUL; order is `name COLLATE "C"`, then `stop_id`, limit 10.
+- Why: SPEC says "contains", so a user typing `%` should not match everything; the fixed collation makes the SQL order equal the Python sort used by the memory fallback.
+- Rejected: passing `q` into ILIKE unescaped and a trigram index (226 stops).
+
+## Plan input errors (`app/api/plan.py`)
+- What: the four parameters are read as strings and parsed in the router, so missing, non-numeric, NaN/inf or out-of-bbox values return `400 invalid_location`, not FastAPI's 422.
+- Why: SPEC Section 12 lists these under `invalid_location`; the generic handler would turn them into `validation_error`.
+- Rejected: typed `float` query parameters with a custom exception handler (it would also change `/api/stops` and `/api/reports` validation).
+
+## The 10 test trips: first run, not tuned (`tests/test_trips.py`)
+- What: 10 trips with expected ride colors from the maintainer, run through the planner on `data/routes/routes.geojson` with the default costs (`TRANSFER_PENALTY_KM` 1.0, `WALK_COST_FACTOR` 2.0, `WALK_RADIUS_M` 500, `TRANSFER_RADIUS_M` 100); no database needed, deterministic.
+- Result: **9 of 10 pass** (target: at least 8). Straight-line ride cost, no tuning applied.
+- Failure, trip 8 (Starbucks Near AUF to Blue End Terminal, expected Purple then Blue): Purple meets Blue at seq 75-76, before Starbucks Near AUF (seq 80). A real Purple jeep keeps looping, but the graph has no edge from the last stop of a circular route to its first, so the planner walks 491 m to a Blue stop and rides Blue only. Cost tuning cannot fix this; Yellow and Grey have the same limit. Known data and model gap; the test is `xfail(strict=True)`.
+- Passing with a different color than first expected: trip 9 (Jenra Mall to System Plus College) rides Grey after an 87 m walk; both Grey and Purple were accepted. Trip 10 rides Blue then Purple.
+- Rejected: counting the gap as a data fix by changing expected colors, and adding a wrap-around edge before measuring (a design change to record separately).

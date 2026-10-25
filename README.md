@@ -46,7 +46,7 @@ The port and seed command are confirmed on Day 1; update this section if they ch
 pytest
 ```
 
-Tests run against a test PostgreSQL database. CI runs the same suite plus `data/validate.py` on every push (GitHub Actions with a Postgres service container).
+Tests run against a test PostgreSQL database (`TEST_DATABASE_URL`, default `postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe_test`; `docker compose up db` provides the server). Use `127.0.0.1`, not `localhost`: on Windows `localhost` tries IPv6 first and stalls. `tests/planner/` and `tests/test_trips.py` do not need Postgres. CI runs the same suite plus `data/validate.py` on every push (GitHub Actions with a Postgres service container).
 
 ## API
 
@@ -63,6 +63,24 @@ Base path `/api`, except `/health`. Errors always have the shape `{"error": "<co
 | `GET` | `/health` | `200` when the process is up; `database: up \| down` |
 
 Error codes: `invalid_location` (400), `no_stop_nearby` (404), `no_route` (404), `route_not_found` (404), `validation_error` (422), `database_unavailable` (503), `internal_error` (500). Details in [SPEC.md](SPEC.md) Sections 6 and 12.
+
+### Example: plan a trip
+
+```bash
+curl 'localhost:8000/api/plan?from_lat=15.1379&from_lng=120.5890&to_lat=15.1655&to_lng=120.5590'
+```
+
+Returns `{"steps": [...], "summary": "..."}`. Steps are `walk`, `ride` and `transfer` objects (SPEC Section 6.3). All four parameters are required and must be inside `SERVICE_BBOX`; anything else is `400 invalid_location`. `404 no_stop_nearby` says whether the starting point or the destination has no stop within `WALK_RADIUS_M`; `404 no_route` means stops exist at both ends but no jeep connects them.
+
+### Example: routes and stops
+
+```bash
+curl localhost:8000/api/routes                  # 9 items, ordered by route_id
+curl localhost:8000/api/routes/yellow_out       # GeoJSON: the line, then one Point per stop in order
+curl 'localhost:8000/api/stops?q=pampang'       # literal, case-insensitive match; %, _ and quotes are plain text
+```
+
+Route data is read once at startup, so `/api/plan`, `/api/routes` and `/api/stops` keep working if the database goes down; after a re-seed, restart the API. `q` is required (empty or whitespace-only is `422`).
 
 ### Example: submit a report
 
