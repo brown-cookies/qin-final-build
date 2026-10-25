@@ -14,9 +14,10 @@ def pt(x_m, y_m):
     return (15.15 + y_m / M_LAT, 120.59 + x_m / LNG)
 
 
-def mk(stops, routes, penalty=PENALTY):
+def mk(stops, routes, penalty=PENALTY, circular=()):
     sm = {sid: Stop(sid, name, *pt(*xy)) for sid, (name, xy) in stops.items()}
-    rm = {rid: {"color": rid.rsplit("_", 1)[0], "direction": rid.rsplit("_", 1)[1], "stops": ids}
+    rm = {rid: {"color": rid.rsplit("_", 1)[0], "direction": rid.rsplit("_", 1)[1], "stops": ids,
+                "circular": rid in circular}
           for rid, ids in routes.items()}
     return Graph(sm, rm, WALK_R, XFER_R, penalty, FACTOR)
 
@@ -175,3 +176,86 @@ def test_walk_edges_do_not_chain_past_transfer_radius():
     )
     path, _ = trip(g2, pt(0, 0), pt(2000, 0))
     assert path is None
+
+
+# Wrap edge: a 1 km square loop a -> b -> c -> d, closed by d -> a when flagged circular.
+SQUARE = {"a": ("Alpha", (0, 0)), "b": ("Bravo", (1000, 0)), "c": ("Charlie", (1000, 1000)), "d": ("Delta", (0, 1000))}
+
+
+def seg(*ids):
+    """Sum of straight-line segments through the stops, in metres."""
+    return sum(haversine_m(*pt(*SQUARE[x][1]), *pt(*SQUARE[y][1])) for x, y in zip(ids, ids[1:]))
+
+
+def loop(circular=True):
+    return mk(SQUARE, {"purple_out": ["a", "b", "c", "d"]}, circular=("purple_out",) if circular else ())
+
+
+def test_wrap_edge_on_circular_only():
+    g2 = mk({**SQUARE, "e": ("Echo", (5000, 0)), "f": ("Foxtrot", (6000, 0))},
+            {"purple_out": ["a", "b", "c", "d"], "blue_out": ["e", "f"]}, circular=("purple_out",))
+    wrap = [(m, c, k) for m, c, k in g2.adj[on("purple_out", 3)] if m == on("purple_out", 0)]
+    assert wrap == [(on("purple_out", 0), pytest.approx(seg("d", "a") / 1000), "ride")]
+    assert not any(m == on("blue_out", 0) for m, _, _ in g2.adj[on("blue_out", 1)])
+    assert len(g2.adj[on("purple_out", 3)]) == 2  # alight + wrap, nothing else
+
+
+def test_wrap_needs_two_stops():
+    g1 = mk({"a": ("Alpha", (0, 0))}, {"purple_out": ["a"]}, circular=("purple_out",))
+    assert [k for _, _, k in g1.adj[on("purple_out", 0)]] == ["alight"]
+    g0 = mk({"a": ("Alpha", (0, 0))}, {"purple_out": []}, circular=("purple_out",))
+    assert g0.adj[at("a")] == []
+
+
+def test_wrap_when_last_and_first_are_the_same_stop():
+    g2 = mk({"a": ("Alpha", (0, 0)), "b": ("Bravo", (1000, 0))}, {"purple_out": ["a", "b", "a"]},
+            circular=("purple_out",))
+    assert (on("purple_out", 0), 0.0, "ride") in g2.adj[on("purple_out", 2)]
+    # board at the last stop (a), alight at b: ride a -> wrap(a, 0 m) -> b; the wrap counts as one passed
+    path, steps = trip(g2, pt(0, 0), pt(1000, 0))
+    assert path is not None  # does not crash on the zero-length edge
+
+
+def test_ride_across_the_wrap():
+    g4 = loop()
+    path, steps = trip(g4, pt(1000, 1000), pt(1000, 0))  # board Charlie, alight Bravo
+    assert on("purple_out", 3) in path and on("purple_out", 0) in path
+    rides = [s for s in steps if s["type"] == "ride"]
+    assert len(rides) == 1
+    r = rides[0]
+    # edges: c->d, d->a (wrap), a->b = 3
+    assert (r["from"], r["to"], r["color"], r["direction"]) == ("Charlie", "Bravo", "purple", "out")
+    assert r["stops_passed"] == 3
+    assert r["distance_m"] == round(seg("c", "d", "a", "b"))
+    assert build_summary(steps) == "Walk to Charlie, ride Purple to Bravo, walk to your destination."
+
+
+def test_ride_from_last_stop_to_first_is_one_edge():
+    path, steps = trip(loop(), pt(0, 1000), pt(0, 0))  # Delta -> Alpha
+    rides = [s for s in steps if s["type"] == "ride"]
+    assert len(rides) == 1
+    assert (rides[0]["from"], rides[0]["to"], rides[0]["stops_passed"]) == ("Delta", "Alpha", 1)
+    assert rides[0]["distance_m"] == round(seg("d", "a"))
+
+
+def test_wrap_needed_only_with_flag():
+    start, end = pt(1000, 1000), pt(1000, 0)
+    path, steps = trip(loop(circular=False), start, end)
+    assert path is None  # Bravo is 1 km behind Charlie, beyond walking range
+    path, steps = trip(loop(), start, end)
+    assert [s["type"] for s in steps] == ["walk", "ride", "walk"]
+
+
+def test_wrap_not_used_when_direct_path_is_cheaper():
+    path, steps = trip(loop(), pt(0, 0), pt(1000, 1000))  # Alpha -> Charlie, forward
+    assert on("purple_out", 0) in path
+    assert not any(a == on("purple_out", 3) and b == on("purple_out", 0) for a, b in zip(path, path[1:]))
+    ride = [s for s in steps if s["type"] == "ride"][0]
+    assert ride["stops_passed"] == 2 and ride["distance_m"] == round(seg("a", "b", "c"))
+
+
+def test_ride_continues_past_the_wrap_in_order():
+    path, steps = trip(loop(), pt(0, 1000), pt(1000, 1000))  # Delta -> wrap -> Alpha -> Bravo -> Charlie
+    ride = [s for s in steps if s["type"] == "ride"][0]
+    assert ride["stops_passed"] == 3
+    assert ride["distance_m"] == round(seg("d", "a", "b", "c"))

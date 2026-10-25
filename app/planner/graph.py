@@ -23,6 +23,13 @@ def on(route_id, seq):
     return ("on", route_id, seq)
 
 
+def mark_circular(routes):
+    """Set routes[rid]["circular"]: a color with an `out` record and no `back` record (SPEC Section 7)."""
+    colors_with_back = {r["color"] for r in routes.values() if r["direction"] == "back"}
+    for r in routes.values():
+        r["circular"] = r["direction"] == "out" and r["color"] not in colors_with_back
+
+
 class Graph:
     """Nodes: ("at", stop_id) and ("on", route_id, seq), seq 0-based position on the route.
 
@@ -31,7 +38,7 @@ class Graph:
     """
 
     def __init__(self, stops, routes, walk_radius_m, transfer_radius_m, transfer_penalty_km, walk_cost_factor):
-        """stops: {stop_id: Stop}. routes: {route_id: {"color", "direction", "stops": [stop_id, ...]}}."""
+        """stops: {stop_id: Stop}. routes: {route_id: {"color", "direction", "stops": [stop_id, ...], optional "circular": bool}}."""
         self.stops = stops
         self.routes = routes
         self.walk_radius_m = walk_radius_m
@@ -46,6 +53,9 @@ class Graph:
             for i in range(len(ids) - 1):
                 km = self.dist_m(ids[i], ids[i + 1]) / 1000.0
                 adj[on(rid, i)].append((on(rid, i + 1), km, "ride"))
+            if route.get("circular") and len(ids) >= 2:  # the jeep keeps looping: last stop -> first
+                km = self.dist_m(ids[-1], ids[0]) / 1000.0
+                adj[on(rid, len(ids) - 1)].append((on(rid, 0), km, "ride"))
         ordered = sorted(stops)
         for i, a in enumerate(ordered):
             for b in ordered[i + 1:]:

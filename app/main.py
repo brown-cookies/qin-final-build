@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import db, queries
 from app.api import ApiError, plan, reports, routes, stops
 from app.config import ConfigError, get_settings
-from app.planner.graph import Graph, Stop
+from app.planner.graph import Graph, Stop, mark_circular
 from app.schemas import HealthResponse
 
 log = logging.getLogger("biyahe")
@@ -36,6 +36,7 @@ def load_route_data(app: FastAPI) -> None:
     }
     for rs in route_stop_rows:  # already ordered by route_id, seq
         routes[rs["route_id"]]["stops"].append(rs["stop_id"])
+    mark_circular(routes)
     app.state.graph = Graph(
         stop_map, routes, settings.walk_radius_m, settings.transfer_radius_m,
         settings.transfer_penalty_km, settings.walk_cost_factor,
