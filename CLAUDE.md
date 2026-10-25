@@ -66,11 +66,11 @@ Keep this block accurate.
 ```
 docker compose up                      # API (:8000) + Postgres; schema applied at startup
                                        # host ports: API_PORT / POSTGRES_PORT override 8000 / 5432
-# seed: Day 2, not yet available (will be: docker compose run --rm api python -m data.seed)
+docker compose run --rm api python -m data.seed   # validate, then replace route/stop/route_stop; re-runnable
 pytest                                 # needs a Postgres test DB: TEST_DATABASE_URL, db name must end in _test
                                        # (default postgresql://biyahe:biyahe@localhost:5432/biyahe_test; created if
                                        # missing; `docker compose up db` provides the server)
-python data/validate.py                # Day 1 stub (exits 0); real checks Day 2; also runs in CI
+python data/validate.py [path]         # SPEC 9.3 checks, no DB/network; exit 1 on failure; also runs in CI
 ```
 
 ## Working conventions

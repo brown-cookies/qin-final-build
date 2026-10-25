@@ -15,6 +15,33 @@ def apply_schema() -> None:
         conn.execute(sql)
 
 
+def replace_route_data(routes: list, stops: list, route_stops: list) -> None:
+    """Replace route, stop and route_stop in one transaction; never touches report.
+
+    routes: (route_id, color, direction, name, line_json, source, verified_on, osm_relation_id)
+    stops: (stop_id, name, lat, lng, osm_node_id); route_stops: (route_id, seq, stop_id).
+    Any error rolls everything back (db.connection() commits only on success).
+    """
+    with db.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM route_stop")
+            cur.execute("DELETE FROM route")
+            cur.execute("DELETE FROM stop")
+            cur.executemany(
+                "INSERT INTO stop (stop_id, name, lat, lng, osm_node_id) VALUES (%s, %s, %s, %s, %s)",
+                stops,
+            )
+            cur.executemany(
+                "INSERT INTO route (route_id, color, direction, name, line, source, verified_on, osm_relation_id) "
+                "VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s)",
+                routes,
+            )
+            cur.executemany(
+                "INSERT INTO route_stop (route_id, seq, stop_id) VALUES (%s, %s, %s)",
+                route_stops,
+            )
+
+
 def ping() -> None:
     with db.connection() as conn:
         conn.execute("SELECT 1")
