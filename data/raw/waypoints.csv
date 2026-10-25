@@ -27,7 +27,7 @@ yellow_out,25,Makimura,15.1345551,120.5925722,1
 yellow_out,26,Grill Mentality,15.1349944,120.5928944,1
 yellow_out,27,7-Eleven near Grill Mentality,15.1359002,120.5915768,1
 yellow_out,28,PLDT Sales and Services,15.1368494,120.5902707,1
-yellow_out,29,BPI-BPO near Puregold,15.1375495,120.5892952,1
+yellow_out,29,Pampang,15.1375495,120.5892952,1
 yellow_out,30,Puregold,15.1383778,120.5881579,1
 yellow_out,31,Palengke Rotonda near Jollibee,15.1387397,120.5875507,1
 yellow_out,32,Im Lucky Mart,15.1379576,120.5870625,1
@@ -179,7 +179,8 @@ purple_out,119,Balibago Police Assistance Desk,15.1683089,120.5895984,1
 purple_out,120,Game Countdown Park,15.1690324,120.5880937,1
 purple_out,121,Bamban PUJ Terminal,15.1693984,120.5875575,1
 purple_out,122,Purple Terminal,15.1691596,120.5867935,1
-purple_out,123,SM Clark End,15.1669903,120.5806237,1
+purple_out,123,Jurio Foodhouse,15.1680300,120.5835400,1
+purple_out,124,SM Clark End,15.1669903,120.5806237,1
 grey_out,1,Grey Terminal,15.1680918,120.5846228,1
 grey_out,2,Bayanihan Park,15.168946,120.5863298,1
 grey_out,3,Jocson College,15.1692185,120.5871437,1
@@ -277,8 +278,9 @@ grey_out,94,Balibago Police Assistance Desk,15.1684932,120.5895616,1
 grey_out,95,Game Countdown Park,15.1689456,120.5880992,1
 grey_out,96,Jocson College,15.169269,120.587143,1
 grey_out,97,Bayanihan Park,15.168986,120.5863058,1
-grey_out,98,SM Clark End,15.1669903,120.5806237,1
-blue_out,1,Blue Terminal,15.1379247,120.5889566,1
+grey_out,98,Jurio Foodhouse,15.1680300,120.5835400,1
+grey_out,99,SM Clark End,15.1669903,120.5806237,1
+blue_out,1,Pampang,15.1379247,120.5889566,1
 blue_out,2,Plaridel Shopping,15.138288,120.5893593,1
 blue_out,3,Republic Central College,15.1392529,120.590307,1
 blue_out,4,Kuliat Street,15.1406312,120.5917376,1
@@ -333,7 +335,7 @@ blue_back,24,North-South Commuter Railway,15.1388807,120.5936704,1
 blue_back,25,Kuliat Street,15.1406312,120.5917376,1
 blue_back,26,Republic Central College,15.1392529,120.590307,1
 blue_back,27,Plaridel Shopping,15.138288,120.5893593,1
-blue_back,28,Blue Terminal,15.1379247,120.5889566,1
+blue_back,28,Pampang,15.1379247,120.5889566,1
 darkyellow_out,1,Dark Yellow Terminal,15.1663974,120.5828311,1
 darkyellow_out,2,Sussie Cuisine,15.1661468,120.5814542,1
 darkyellow_out,3,Sunshine Laundry,15.1659514,120.5804687,1
