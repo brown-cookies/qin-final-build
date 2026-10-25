@@ -1,0 +1,116 @@
+<spec>
+  <scope>
+    Day 1 "rest of day: Scaffold" from docs/roadmap.md. Greenfield: the repo currently holds only SPEC.md, CLAUDE.md, README.md, docs/roadmap.md, docs/OPEN_ITEMS.md and tooling dirs. Not a git repo; no commits, pushes or PR creation are part of this task (CI file is authored, not run). Out of scope: planner logic, /api/plan, /api/routes, /api/stops, route data pipeline (fetch_osm, snap_routes, build_routes, seed, real validate), map page content, bench, docs beyond what is listed, docs/OPEN_ITEMS.md (user-maintained, do not edit).
+    SPEC refs: Sec 2 (architecture rules), Sec 3 (stack), Sec 5 FR-5/6/9/10 and NFR-3, Sec 6.1, 6.2, 6.6, Sec 7 (registry tokens, schemas rule), Sec 8 (schema), Sec 10 (config), Sec 12 (errors), Sec 13 (layout, SQL rules, secrets), Sec 14 items 2, 3, 4, 11 (and 9 for the reports/health portion).
+  </scope>
+
+  <user_stories>
+    - As a commuter, I can submit a problem report (route color, message, optional pin) so the maintainer learns about wrong data.
+    - As a commuter or maintainer, I can list the most recent reports, newest first.
+    - As an operator, I can run `docker compose up` and get API plus Postgres with no manual steps, and the API waits/restarts until the DB is ready.
+    - As an operator, I can call /health to tell whether the process is up and whether the DB is reachable, even when the DB is down.
+    - As an API client, I always receive errors in one shape, `{"error": "<code>", "message": "<text>"}`, and never see internal details.
+    - As a developer, I can run `pytest` against a test database and get CI feedback on every push.
+    - As a developer, the repo skeleton matches SPEC Sec 13 so Day 2 work drops into place.
+  </user_stories>
+
+  <file_list>
+    <note>Paths relative to repo root. Directories not named here for later days are created only as empty placeholders where stated.</note>
+    <file>app/__init__.py</file>
+    <file>app/main.py -- app factory/instance, startup (schema apply, pool open, fail fast), exception handlers, /health, router include</file>
+    <file>app/config.py -- all Sec 10 variables read from env with defaults (DATABASE_URL, SERVICE_BBOX parsed to four floats, WALK_RADIUS_M, TRANSFER_RADIUS_M, TRANSFER_PENALTY_KM, WALK_COST_FACTOR, GRAPH_MODE)</file>
+    <file>app/db.py -- psycopg v3 connection pool, reachability check, startup failure</file>
+    <file>app/queries.py -- the only module with SQL besides sql/schema.sql: insert report, list recent reports, schema apply helper may live here or db.py (implementer's call, but SQL text only in queries.py/schema.sql)</file>
+    <file>app/schemas.py -- Pydantic models: report request, report response, error response, health response</file>
+    <file>app/api/__init__.py</file>
+    <file>app/api/reports.py -- thin router for POST and GET /api/reports</file>
+    <file>app/planner/__init__.py -- empty placeholder only (no graph/search/steps logic)</file>
+    <file>sql/schema.sql -- Sec 8 tables (route, stop, route_stop, report) with CREATE TABLE IF NOT EXISTS and the created_at DESC index</file>
+    <file>web/ -- directory may exist; no map page required (placeholder allowed, not required)</file>
+    <file>data/validate.py -- stub that exits 0 with a clear "stub: no route data yet" message</file>
+    <file>data/__init__.py -- only if needed for the documented seed command; no seed.py content required</file>
+    <file>tests/conftest.py -- test database fixture</file>
+    <file>tests/api/test_health.py, tests/api/test_reports.py (names indicative)</file>
+    <file>requirements.txt -- exact pinned versions (==)</file>
+    <file>Dockerfile -- pinned Python base image tag</file>
+    <file>docker-compose.yml -- api + postgres (pinned image tag), healthcheck/depends_on and restart policy</file>
+    <file>.github/workflows/ci.yml</file>
+    <file>.gitignore, .dockerignore, .env.example (no secrets)</file>
+    <file>CLAUDE.md "Commands" block updated to match what actually exists (CLAUDE.md says to keep it accurate)</file>
+    <file>README.md -- only if a minimal run/endpoint-row addition is needed for the three Day 1 endpoints (NFR-4); full README is Day 3</file>
+  </file_list>
+
+  <pinned_versions_needed>
+    requirements.txt: fastapi, uvicorn (standard or equivalent), pydantic, psycopg (v3, with binary and pool extras: psycopg[binary,pool] or psycopg-pool pinned separately), pytest, httpx (for FastAPI TestClient). Dockerfile: python base image tag. docker-compose.yml: postgres image tag. CI: actions/checkout, actions/setup-python, postgres service image, Python version (must match Dockerfile major.minor). Pins appear only in these files, not in docs. Implementer chooses versions current as of today (2026-10-24) and verifies they install.
+  </pinned_versions_needed>
+
+  <acceptance_criteria>
+    <criterion id="1">Config: with no env vars set except DATABASE_URL, config yields the Sec 10 defaults (SERVICE_BBOX 15.08,15.22,120.50,120.68 parsed as lat_min,lat_max,lng_min,lng_max; WALK_RADIUS_M 500; TRANSFER_RADIUS_M 100; TRANSFER_PENALTY_KM 1.0; WALK_COST_FACTOR 2.0; GRAPH_MODE cached). Setting each env var overrides it. A unit test asserts defaults and one override. No tunable is a hardcoded constant elsewhere in app/.</criterion>
+    <criterion id="2">Schema: sql/schema.sql uses CREATE TABLE IF NOT EXISTS for route, stop, route_stop, report with the columns, types, PK/FKs, defaults (report_id uuid default gen_random_uuid(), status default 'new', created_at default now()) and the created_at DESC index from Sec 8. Applying it twice to the same database succeeds with no error. A test verifies idempotent apply and that all four tables exist.</criterion>
+    <criterion id="3">Startup: on app startup the schema is applied and the pool opened. If the database is unreachable at startup the process exits non-zero with one clear log line naming the database as the cause (no raw traceback required to understand it). Verified by a test or manual run with a bad DATABASE_URL.</criterion>
+    <criterion id="4">GET /health returns 200 `{"status":"ok","database":"up"}` when DB reachable, and 200 `{"status":"ok","database":"down"}` when the DB is unreachable at request time (test simulates DB loss after startup).</criterion>
+    <criterion id="5">POST /api/reports with a valid body (route_color in yellow|blue|purple|grey|red|darkyellow|other, message 1-500 chars, optional lat+lng inside SERVICE_BBOX) returns 201 with exactly the fields report_id (uuid), route_color, message, lat, lng, status="new", created_at (ISO-8601). Exactly one row exists in report afterwards, with values matching the response. Body without lat/lng returns lat and lng as null.</criterion>
+    <criterion id="6">POST /api/reports returns 422 with error code `validation_error` for each of: empty message; message of 501 chars (500 accepted); unknown route_color (e.g. "pink", and uppercase "YELLOW"); lat without lng; lng without lat; lat or lng outside SERVICE_BBOX (test each of the four bounds); non-numeric lat/lng; missing message; missing route_color; an unknown extra field in the body; malformed/non-JSON body. No row is written in any of these cases.</criterion>
+    <criterion id="7">GET /api/reports returns a JSON array of the criterion-5 response shape, newest first by created_at. Default limit is 10. With 12 rows inserted and no limit, exactly 10 come back; limit=50 returns up to 50; ordering is verified with at least 3 rows.</criterion>
+    <criterion id="8">GET /api/reports limit bounds: limit=1 and limit=50 return 200; limit=0, limit=51, limit=-1 and limit=abc each return 422 `validation_error`. Empty table returns 200 with `[]`.</criterion>
+    <criterion id="9">When the DB is unreachable, POST /api/reports and GET /api/reports each return 503 `{"error":"database_unavailable","message":...}` (not 500, not a hang beyond a bounded pool timeout). Test simulates DB loss. A well-formed request failing for DB reasons returns 503; a malformed request still returns 422 first.</criterion>
+    <criterion id="10">Error shape: every error response from the app (422 validation including query params and body, 404 for unknown path, 405 for wrong method, 503, 500) has body exactly `{"error": <code>, "message": <plain text>}` with no other keys. Codes: validation_error (422), database_unavailable (503), internal_error (500). Unknown-path/method 404/405 use a documented stable code of the implementer's choice (e.g. not_found, method_not_allowed), noted in the code. FastAPI's default `{"detail": ...}` never appears.</criterion>
+    <criterion id="11">Unhandled exceptions: a test registers/forces a route that raises an arbitrary exception; the response is 500 `internal_error` with a generic message that contains neither the exception text nor a stack trace; the details are logged server-side.</criterion>
+    <criterion id="12">SQL discipline: all SQL strings live in app/queries.py and sql/schema.sql; every value goes in via %s driver parameters; no f-strings/concatenation/format of user input into SQL. A grep-based or reviewed check finds no SQL keywords in app/api/ or app/main.py. Routers contain no logic beyond parse, call, shape.</criterion>
+    <criterion id="13">Schemas: report request model rejects unknown fields (extra="forbid"); one Pydantic model per request/response exists in app/schemas.py; /docs (OpenAPI) loads and lists /health, POST /api/reports, GET /api/reports.</criterion>
+    <criterion id="14">Docker: `docker compose up` (clean volume) brings up postgres and api with no manual step; API becomes healthy even if Postgres is slower to start (healthcheck-gated depends_on and/or restart policy). Afterwards `curl localhost:8000/health` shows database "up" and checklist items 2, 3, 4 (Sec 14) pass against the running stack. DATABASE_URL for compose is set in compose (dev-only credentials, no real secrets). Dockerfile builds from pinned base image and runs as the app's server on a documented port.</criterion>
+    <criterion id="15">Tests: `pytest` from repo root passes against a Postgres test database, configured via env var (default pointing at the compose/CI Postgres), with a fixture that applies schema.sql and gives each test a clean report table (and never touches a non-test database). Test list covers criteria 4-11. DB-down tests need no manual container stopping.</criterion>
+    <criterion id="16">CI: .github/workflows/ci.yml triggers on push (and pull_request), uses a Postgres service container with health options, installs pinned requirements, runs `pytest`, then runs `python data/validate.py` (the stub, exits 0). A deliberately failing test makes the workflow's pytest step exit non-zero (Sec 14 item 11); the YAML parses and its commands run locally in the same order. Actual GitHub run is the user's to confirm.</criterion>
+    <criterion id="17">Skeleton: directories and files per file_list exist; no planner/search/graph logic, no /api/plan, /api/routes, /api/stops endpoints, no route data files are added. CLAUDE.md Commands block matches the real commands (including the test DB requirement and the seed line marked as Day 2 / not yet available).</criterion>
+    <criterion id="18">Secrets and config: no credentials other than documented local dev defaults are committed; .env.example lists the Sec 10 variables; .gitignore excludes .env, __pycache__, venvs, .pytest_cache.</criterion>
+  </acceptance_criteria>
+
+  <assumptions>
+    - Python 3.12 or the newest version that all pinned packages and python base image support; Dockerfile and CI use the same major.minor.
+    - Whitespace-only message is rejected (message stripped, then length 1-500 enforced). Message length counts characters after stripping; leading/trailing whitespace is not preserved in storage.
+    - route_color matching is exact lowercase tokens from the Sec 7 registry plus "other"; no case folding.
+    - lat/lng bbox check is inclusive of the bounds, using SERVICE_BBOX at the time of request/app start.
+    - Response for lat/lng when absent is JSON null (keys present).
+    - GET /api/reports with no limit param uses limit=10; ties in created_at broken deterministically (e.g. by report_id) so ordering is stable.
+    - Schema is applied at startup from sql/schema.sql by the app itself (Sec 8); route/stop/route_stop tables are created but stay empty on Day 1.
+    - Unknown paths/methods use codes not_found and method_not_allowed (Sec 12 does not list them; Sec 12 rule "one error shape everywhere" governs). If SPEC is wanted to list them, that is a later doc fix.
+    - The test database is a real Postgres (not SQLite or mocks), reached via an env var such as TEST_DATABASE_URL with a default matching the compose service; the DB-down simulation is done in-process (e.g. pointing the pool at a dead port or closing it), not by stopping containers.
+    - data/validate.py stub lives at data/validate.py exactly as CLAUDE.md names it; it is a plain script runnable as `python data/validate.py`.
+    - The documented seed command (`python -m data.seed`) does not exist yet; CLAUDE.md notes it as pending Day 2.
+    - Static serving of web/ is not wired on Day 1 (map page is Day 3).
+    - The roadmap's "open the PR early as a draft" and any git actions are excluded because the repo is not a git repo and the task forbids commits/pushes.
+    - The API listens on port 8000 in the container and is published as 8000.
+  </assumptions>
+
+  <edge_cases>
+    - Message of exactly 1 and exactly 500 characters accepted; 0 and 501 rejected; multi-byte characters (e.g. Tagalog or emoji input) count as characters and round-trip intact.
+    - Coordinates exactly on a bbox edge accepted; lat/lng swapped (lat in the 120.x range) rejected as out of bbox.
+    - lat=0 / lng=0 are real numbers, handled as "provided" not "missing" (outside bbox, so 422, but not treated as absent).
+    - Null explicitly sent for lat and lng together is treated as absent; null for only one is the "one of the pair" 422.
+    - SQL-metacharacter and very long text in message is stored verbatim (parameterized) and returned verbatim.
+    - Pool exhaustion or DB loss mid-request yields 503, not 500 and not a hang.
+    - DB recovers after being down: subsequent requests succeed and /health returns to "up" without restarting the process.
+    - Postgres not ready when API starts under compose: API exits, restarts, and eventually comes up.
+    - Invalid SERVICE_BBOX env value (wrong count, non-numeric, min greater than max) fails fast at startup with a clear message.
+    - Invalid GRAPH_MODE value fails fast at startup (allowed: cached, rebuild).
+    - Schema apply twice (restart) is a no-op and never drops or alters report rows.
+    - Concurrent inserts do not collide on report_id.
+  </edge_cases>
+
+  <risks>
+    <risk severity="medium">Simulating DB-down in tests while keeping /health at 200 and /api/reports at 503 depends on pool timeout settings; an unbounded wait would make tests hang. Pool acquire timeout must be short and configured, not a magic constant (CLAUDE.md rule 7 vs Sec 10 listing no such variable; keep an internal default or add a documented env var and update SPEC Sec 10 in the same change).</risk>
+    <risk severity="medium">FastAPI/Pydantic default error bodies and HTTPException handling are easy to leave on the `detail` shape for 404/405 and for errors raised before routing; every path must be covered by handlers.</risk>
+    <risk severity="low">pinned versions chosen from memory may be unavailable or incompatible; implementer must install and run tests to confirm.</risk>
+    <risk severity="low">CI cannot be executed in this environment (no repo remote); it is verified only by local equivalence of its commands.</risk>
+    <risk severity="low">Sec 12 lacks codes for 404/405 on unknown paths and for any pool-timeout variable; small SPEC drift to be fixed in the same change per CLAUDE.md.</risk>
+    <risk severity="low">The roadmap "done when" items (green CI on a PR, open-items block) cannot be verified here and are not part of this task's acceptance.</risk>
+  </risks>
+
+  <dependencies>
+    Packages: fastapi, uvicorn, pydantic, psycopg v3 (binary, pool), pytest, httpx. Services: PostgreSQL (compose service; CI service container; local test DB). Tooling: Docker and Compose, GitHub Actions. Files: SPEC.md Sec 8 schema (source for schema.sql), CLAUDE.md (Commands block to update). No third-party service called at runtime.
+  </dependencies>
+
+  <self_critique>
+    Every user story maps to criteria: reports submit (5, 6), list (7, 8), compose (14), health (4), error shape (10, 11), tests/CI (15, 16), skeleton (17). Each criterion is observable via HTTP response, DB row, exit code or file check; criterion 12 is review/grep based and criterion 16's real GitHub run is not verifiable here. Biggest remaining risk: the unspecified behaviours I assumed (whitespace-only message, 404/405 codes, pool timeout configuration, python version) could differ from what the user expects; none blocks the spec, so they are recorded rather than asked. Also the file_list allows queries/db split flexibility, which is a minor ambiguity that does not affect testability.
+  </self_critique>
+</spec>

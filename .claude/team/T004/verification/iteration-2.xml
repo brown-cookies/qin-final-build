@@ -1,0 +1,21 @@
+<verification>
+  <iteration>2</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1-19">met - full suite 201 passed; tests/planner 12 passed. Live regression of plan/routes/stops/db-down matches spec.</criterion>
+    <criterion id="bug1">fixed - iteration-1 reproduction now returns transfers with walk_m 29 (Pampang to Ocampo's Appliances) and 48 (Addessa to Angeles Sapangbato Terminal), both under TRANSFER_RADIUS_M; no 511 m chained walk.</criterion>
+    <criterion id="16">met - DB stopped: /health 200 database down, /api/plan, /api/routes, /api/routes/blue_out, /api/stops all 200; POST /api/reports 503 database_unavailable.</criterion>
+  </criteria>
+  <test_results>
+    <result>python -m pytest -q -> 201 passed, 1 warning (21.3s)</result>
+    <result>python -m pytest tests/planner -q -> 12 passed</result>
+  </test_results>
+  <runtime_check result="yes">
+    Re-seeded (9 routes, 226 stops, 462 route_stop), ran uvicorn, curled the iteration-1 plan (now a route with two short transfers), a one-jeep plan, invalid location (400), /api/routes (9), /api/routes/blue_out (LineString first), unknown id (404 route_not_found), /api/stops?q=pam, missing q (422). Then stopped Postgres under a running server for the 200/503 split. Db restarted afterwards.
+  </runtime_check>
+  <bugs></bugs>
+  <hard_rules>No SQL outside app/queries.py (grep over app/ clean); planner imports only math, heapq, collections and app.planner.graph (no DB or config); single error shape observed on 400/404/422/503.</hard_rules>
+  <self_critique>
+    Bug 2 (same start/end stop gives two walk steps) intentionally not evaluated. Did not run Docker image build or CI. Summary phrasing "transfer to Grey, transfer to Red" is back-to-back transfers with no ride phrase between; accepted as the free-form wording per spec risks. Concurrency not stress-tested. Dev DB was re-seeded (expected).
+  </self_critique>
+</verification>

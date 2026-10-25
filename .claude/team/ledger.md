@@ -1,0 +1,17 @@
+T001 | pipeline | verify iteration 1 | passed
+T002 | pipeline | route/clarify | blocked_on_user
+T002 | pipeline | implement (docs only) | in_progress
+T002 | pipeline | verify (grep + link check) | passed
+T003 | pipeline | verify iteration 1 | passed
+T004 | pipeline | verify iteration 2 | passed
+T004 | pipeline | minimal-planner audit (read-only) | done
+T005 | pipeline | plan (empty-data signal + restart doc) | in_progress
+T005 | pipeline | implement iteration 1 | in_progress
+T005 | pipeline | verify iteration 1 | in_progress
+T005 | pipeline | verify iteration 1 | passed
+T005 | pipeline | implement iteration 2 (re-run after lost work) | in_progress
+T005 | pipeline | verify iteration 2 | in_progress
+T005 | pipeline | verify iteration 2 | passed
+T006 | pipeline | plan (circular wrap edge, trip 8) | in_progress
+T006 | pipeline | implement iteration 1 | in_progress
+T006 | pipeline | implement iteration 1 (trip 8 still fails, criteria 9/10 unmet) | escalated

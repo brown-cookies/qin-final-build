@@ -1,0 +1,89 @@
+<spec>
+  <user_stories>
+    - As a commuter, I give a start point and a destination (lat/lng) and get ordered plain-language steps plus a one-line summary (FR-1, FR-2).
+    - As a commuter, a trip that needs a second jeep shows ride, transfer, ride; consecutive stops on one route show as one ride step.
+    - As a commuter, I get a clear error saying whether my start or my destination has no stop nearby, or that no jeep connects the two.
+    - As the map page, I can list the 9 route records and fetch one route as GeoJSON (line plus ordered stops) (FR-3).
+    - As the map page, I can search stops by partial, case-insensitive name (FR-4).
+    - As an operator, if the database drops after startup, planning, routes and stops keep working while reports return 503 and health says database down (SPEC Section 12).
+    - As a maintainer, I can unit-test the planner with a tiny hand-made graph without Postgres.
+  </user_stories>
+
+  <acceptance_criteria>
+    1. Graph build (app/planner/graph.py): given plain data (stops, routes with ordered stop lists, settings values) it builds nodes at(stop) and on(route_id, seq), with edges: at-&gt;on boarding cost TRANSFER_PENALTY_KM; on(seq)-&gt;on(seq+1) cost = straight-line km between the two stops; on-&gt;at cost 0; at-&gt;at walking between distinct stops within TRANSFER_RADIUS_M cost = km x WALK_COST_FACTOR. Pass: a unit test on a fixture graph asserts each edge kind and cost, and that stops farther apart than TRANSFER_RADIUS_M have no walk edge.
+    2. Virtual start/end: for a query point, the start connects to every stop within WALK_RADIUS_M and every stop within WALK_RADIUS_M connects to the end, each with walk cost km x WALK_COST_FACTOR. The virtual nodes are not persisted in the shared graph (concurrent or repeated queries do not affect each other). Pass: unit test runs two different queries on one graph and the second result is unaffected by the first; a stop at exactly WALK_RADIUS_M or less is included, one beyond is excluded.
+    3. Search (app/planner/search.py): Dijkstra using heapq returns the lowest-cost path or "no path". Pass: unit tests on the fixture graph cover (a) single-route trip, (b) trip needing a transfer at a shared stop_id, (c) a case where a longer-riding single-jeep option beats a two-jeep option because of the boarding penalty, (d) disconnected components give no path.
+    4. Circular route: a route passing the same stop_id twice (two seqs) is handled; riding follows seq order. Pass: unit test with a fixture circular route where the ride goes past the repeated stop and the stops_passed/seq order is correct.
+    5. Steps (app/planner/steps.py): consecutive ride edges on one route merge into one ride step with color, direction, from, to (stop names), stops_passed and distance_m (rounded integer metres, sum of straight-line segments). A board onto a different route after an alight inserts a transfer step {type, from, to, walk_m, to_color}; walk_m is 0 when at the same stop, else the walking distance in metres. First and last steps are walk steps from "Your start point" and to "Your destination" with distance_m integer metres. Shapes match SPEC Section 6.3 exactly (walk: type/from/to/distance_m; ride: type/color/direction/from/to/stops_passed/distance_m; transfer: type/from/to/walk_m/to_color). Pass: unit tests assert the exact step lists for a one-jeep and a two-jeep fixture trip.
+    6. Summary: a one-line English string in the SPEC 6.3 style, e.g. "Walk to X, ride Yellow to Y, transfer to Red, get off at Z, walk to your destination." Pass: unit test asserts the exact string for the one-jeep and two-jeep fixture trips; color names are human-readable (darkyellow rendered as "Dark yellow").
+    7. Startup loader: on startup, after the schema is applied, route/stop/route_stop data is read via new read functions in app/queries.py (parameterized/no user input, no SQL outside queries.py and schema.sql), the graph is built once and kept in memory, and the same loaded data backs /api/routes, /api/routes/{id} and /api/stops-free planning. Pass: with the DB seeded, /api/plan works after the DB pool is swapped to a dead one (existing db_down fixture).
+    8. Empty route data at startup (DB reachable but unseeded): the app still starts; /api/plan returns 404 no_stop_nearby for any in-bbox query, /api/routes returns [] (200). It must not crash. Pass: API test with route tables empty.
+    9. GET /api/plan success (200) with query params from_lat, from_lng, to_lat, to_lng returns {steps, summary} per SPEC 6.3 via a Pydantic response model in app/schemas.py. Pass: API test with route data inserted into the test DB: a one-jeep trip returns walk, ride, walk; a transfer trip returns walk, ride, transfer, ride, walk.
+    10. GET /api/plan invalid_location: any of the four params missing, non-numeric, NaN/inf, or outside SERVICE_BBOX returns 400 {"error":"invalid_location","message":...} (this overrides the generic 422 for this endpoint, per SPEC Section 12). Pass: API tests for each case assert status 400 and code.
+    11. GET /api/plan no_stop_nearby: no stop within WALK_RADIUS_M of the start returns 404 no_stop_nearby with a message naming the start ("starting point" wording); same for the end naming the destination; if both ends lack a stop, the start is reported. Pass: three API tests assert code and that the message distinguishes start from end.
+    12. GET /api/plan no_route: stops exist near both ends but no path connects them returns 404 no_route. Pass: API test using two disconnected fixture routes.
+    13. GET /api/routes returns 200 with a list of {route_id, color, direction, name, stop_count} for every route record, ordered deterministically (by route_id). With the real seed this is 9 items. stop_count counts route_stop rows (a circular route passing a place twice counts both). Pass: API test with inserted fixture routes asserts exact items.
+    14. GET /api/routes/{route_id} returns 200 GeoJSON FeatureCollection: one LineString feature (the route line, [lng,lat] coordinates) first, then one Point feature per route_stop in seq order with properties name and seq (seq 1-based), Point coordinates [lng,lat]. Unknown route_id returns 404 {"error":"route_not_found",...}. A route_id differing only by case or with injected SQL characters returns 404, never 500. Pass: API tests for success, unknown id, and a repeated stop appearing twice with different seq.
+    15. GET /api/stops?q= returns up to 10 objects {stop_id, name, lat, lng} whose name contains q case-insensitively, via a parameterized query (name ILIKE '%' || %s || '%'). Empty q, whitespace-only q, or missing q returns 422 validation_error. Pass: API tests for lowercase partial match, the 10-result cap, ordering stable (by name then stop_id), no match returns [] with 200, and q containing % or _ or a quote does not error. Assumption recorded below on whether % and _ are treated literally.
+    16. DB-down split: with the db_down fixture, GET /api/plan, /api/routes, /api/routes/{id} return 200 (served from startup data); /api/stops - see assumption on serving from memory - returns 200; /api/reports returns 503 database_unavailable; /health returns 200 with database "down". Pass: one API test per endpoint.
+    17. All new error responses use the single error shape {"error","message"}; no stack traces or SQL in messages. Routers in app/api/plan.py, routes.py, stops.py are thin (parse, call planner/queries/loaded data, shape response) and are registered in app/main.py. New Pydantic models are in app/schemas.py with unknown-field rejection where a request body applies (none here) .
+    18. No hardcoded tunables: radii, penalty and walk factor come from get_settings(); planner modules take values as arguments (they never import config or the DB). Pass: planner unit tests run with no Postgres and no env setup (the existing client fixture is not required for tests/planner/).
+    19. Tests/conftest: tests/planner/ tests must not require Postgres (conftest.py's autouse DB fixture must not force a DB connection for them, or planner tests live where it does not apply); API tests that need route data insert fixture rows themselves and must not leave the test DB in a state that breaks the existing report and data/seed tests. Pass: pytest passes for the full suite, and tests/planner passes with Postgres stopped.
+  </acceptance_criteria>
+
+  <assumptions>
+    - Roadmap path is docs/roadmap.md; CLAUDE.md says roadmap.md. Treated as the same file; not an issue.
+    - Data held in memory at startup (routes, ordered stops, lines) also serves /api/routes, /api/routes/{id}; /api/stops is also served from startup data when the DB is down (SPEC Section 12 requires it to keep working). When the DB is up, stops search uses the parameterized ILIKE query in queries.py as the roadmap says; when the DB is unreachable it falls back to the in-memory stop list with the same case-insensitive substring semantics, limit 10, same ordering. If the implementer prefers to always search in memory, that is acceptable only if an ILIKE query still exists in queries.py; the visible behavior must be identical.
+    - In /api/stops, q is matched as a literal substring: % and _ in q are escaped so they do not act as wildcards. (SPEC does not say; literal is the safer reading of "contains".) q is stripped of surrounding whitespace.
+    - Stop search ordering: name ascending then stop_id; SPEC says only "up to 10 matches".
+    - /api/plan param errors (missing/non-numeric) return 400 invalid_location, not 422, because SPEC Section 12 lists them under invalid_location; this is a deliberate exception to FR-10's general 422.
+    - Walk and ride distances are haversine straight-line metres, rounded to integer metres in steps. Cost arithmetic uses km as floats unrounded.
+    - A transfer step is emitted whenever the path alights from one route and boards another (at the same stop_id, or after a walk edge between stops within TRANSFER_RADIUS_M). walk_m is 0 for same stop, else the walk distance. "from"/"to" are stop names.
+    - Boarding the same route again after an alight (e.g. alight and re-board the circular route) is still a transfer only if the route_id differs; the planner would never choose it because of the penalty, so no special handling beyond not merging across an alight.
+    - Two routes of the same color (e.g. blue_out and blue_back) are different routes: switching between them is a transfer step with to_color equal to the same color.
+    - Ride step direction is the route's direction string (out/back) as in the route_id; color is the lowercase token (darkyellow), not the display name.
+    - If the start and end both fall within WALK_RADIUS_M of the same single stop and the lowest-cost path has no ride, the response is two walk steps and a summary with no ride phrase. No direct start-to-end walking edge is added (SPEC does not define one).
+    - Zero-length walk (point exactly on a stop) still emits a walk step with distance_m 0.
+    - Ties in Dijkstra cost may resolve any way; tests must avoid exact ties.
+    - Settings are read via get_settings(); the graph is built once in the app lifespan and stored on app.state or a module-level holder (implementer's choice). No per-request rebuild.
+    - Reload of route data after a re-seed requires an app restart (route data is read-only at runtime; CLAUDE.md rule 4).
+    - tests/test_trips.py and cost tuning, web/ front end, and Day 1 architecture findings are out of scope per the request; defaults for TRANSFER_PENALTY_KM and WALK_COST_FACTOR stay as in config.
+    - docs updates (README endpoint rows, DECISIONS.md entry for the planner) are not part of this task's acceptance beyond keeping SPEC and code consistent; no SPEC response shapes are changed. If the implementer must deviate, SPEC.md is fixed in the same change.
+  </assumptions>
+
+  <edge_cases>
+    - Route passing the same stop_id twice (circular): two on() nodes, both alighting at the same at() node; GeoJSON detail lists the stop twice with different seq; stop_count counts both.
+    - A stop_id appearing in the stop table but on no route: still usable as a walking target for nearby-ness? It has no on() nodes so no ride; it must not crash search or produce a misleading no_stop_nearby vs no_route outcome. (Assumption: it counts as a stop within radius for no_stop_nearby purposes.)
+    - Start point exactly at a stop, or end exactly at start.
+    - Lat/lng at the exact bbox edges are valid (inclusive); lat/lng order mixed up lands outside the bbox and returns 400.
+    - from_lat given as "abc", "", "nan", "inf", "1e999".
+    - Two stops within TRANSFER_RADIUS_M with different stop_ids: walk edge used for a transfer with walk_m above 0.
+    - Walk edges must not connect a stop to itself or double-count the same-stop transfer (same stop_id already shares the at() node).
+    - Path through a one-way (yellow_out) route only in the out direction; no back edges.
+    - Dijkstra with unreachable end terminates without exhausting indefinitely and returns "no path".
+    - Many stops sharing a name substring; q of 1 character; q very long (rejected or handled without error); q with Unicode.
+    - Route data tables empty at startup; DB down at request time for plan/routes/stops.
+    - route_id path containing slashes or percent-encoding: 404 route_not_found (or the generic 404 handler for unrouted paths), never 500.
+    - Repeated plan queries do not mutate the shared graph.
+  </edge_cases>
+
+  <risks>
+    <risk severity="high">Route data in the test DB: API tests need route/stop/route_stop rows, while tests/data/ seed tests replace those tables and the startup graph is built once. If the loader runs before test data is inserted, API tests see an empty graph. The implementation needs a defined way to (re)load in-memory data in tests (e.g. calling the loader after inserting fixtures) without adding a runtime reload endpoint.</risk>
+    <risk severity="medium">/api/stops DB-down behavior: SPEC says it must keep working, but the roadmap says parameterized ILIKE (a DB query). Resolved by the assumption of a memory fallback; reviewers should confirm the ILIKE query still exists and is tested.</risk>
+    <risk severity="medium">Straight-line ride cost on a circular route can make the cheapest path ride "backwards" through a loop, or cost between consecutive stops can be near zero; results on real data are untested until test_trips.py exists (out of scope).</risk>
+    <risk severity="medium">Per-query virtual nodes must not mutate the shared graph; a naive implementation that adds edges to the global adjacency list would corrupt later requests under concurrent sync endpoint threads.</risk>
+    <risk severity="low">400 for plan parameter errors differs from the project's generic 422 handler; the plan router must bypass or customize validation so non-numeric inputs do not become validation_error.</risk>
+    <risk severity="low">Transfer wording and summary text are partly free-form; only the SPEC example is normative.</risk>
+  </risks>
+
+  <dependencies>
+    - SPEC.md Sections 6.3-6.5, 7, 10, 12; CLAUDE.md hard rules.
+    - Existing: app/main.py (lifespan, error handlers), app/config.py (get_settings), app/db.py (connection, DatabaseUnavailable), app/queries.py (new read-only route/stop queries), app/schemas.py (new response models), tests/conftest.py (client, db_down, raw_db fixtures).
+    - Route/stop/route_stop tables populated by data/seed.py from data/routes/routes.geojson (Track A, done); for API tests, fixture rows inserted directly.
+    - Python stdlib only for planner (heapq, math); no new third-party packages.
+  </dependencies>
+
+  <self_critique>
+    Every story maps to criteria: plan (1-6, 9-12), transfers (5, 9), errors (10-12), routes (13-14), stops (15), DB-down (7, 16), unit-testable planner (3, 18, 19). All criteria are pass/fail testable. Biggest remaining risk is the test-data and startup-loader interplay (criterion 19, risk 1) and the stops-when-DB-down interpretation, both recorded as assumptions rather than blocking questions because SPEC Section 12 and the roadmap together are resolvable. Criterion 7 contains a garbled phrase ("stops-free planning") that means the loaded data backs routes endpoints and planning; the intent is that routes/plan use startup data. Criterion 15's start-vs-end wording is left to the implementer beyond distinguishing the two ends.
+  </self_critique>
+</spec>

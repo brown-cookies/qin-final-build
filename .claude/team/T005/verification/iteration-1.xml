@@ -1,0 +1,28 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met - live run on empty DB logged exactly one "WARNING:biyahe:Started with no route data: run the seed command, then restart the api (docker compose restart api)..." after "Loaded 0 routes and 0 stops"; after seed+restart only "Loaded 9 routes and 226 stops", no WARNING. test_startup_warning_only_when_empty passes.</criterion>
+    <criterion id="2">met - empty: {"status":"ok","database":"up","route_data":"empty"} 200; after restart route_data "loaded"; with DB made unreachable (loaded app) 200 {"status":"ok","database":"down","route_data":"loaded"}. Empty+down covered by test_health_down_empty (passes). HealthResponse uses Literal["loaded","empty"].</criterion>
+    <criterion id="3">met - empty DB: valid in-bbox plan -> 503 {"error":"route_data_unavailable","message":"Route data is not loaded. Ask the maintainer to seed the database and restart the service."} (two keys); out-of-bbox -> 400 invalid_location; stays 503 after seed until restart. Note: /api/plan is GET only (brief said POST/GET).</criterion>
+    <criterion id="4">met - after restart plan returns 200 with steps; /api/routes [] 200 and /api/routes/yellow_out 404 route_not_found while empty; world-fixture tests pass (216 passed).</criterion>
+    <criterion id="5">met - SPEC.md Section 6.6 has route_data and meaning; Section 12 row at line 349 with route_data_unavailable.</criterion>
+    <criterion id="6">met - Section 14 item 1 reads seed, then `docker compose restart api`, then /health database up and route_data loaded; item 8 untouched.</criterion>
+    <criterion id="7">met - README quick start (restart line after seed, plus note), README /health row, CLAUDE.md Commands line and /health bullet all mention restart and route_data; the restart command is identical (`docker compose restart api`) in SPEC, README, CLAUDE.md.</criterion>
+    <criterion id="8">met - docs/DECISIONS.md "Empty route data signal" entry: What/Why/Rejected (3 lines), rejects runtime reload and seed-restarts-container, cross-references "Route data at startup".</criterion>
+    <criterion id="9">met - full suite 216 passed, 1 xfailed. Diff to existing tests: test_health.py exact bodies now include route_data (the two existing tests also gained the world fixture param, needed so data is loaded); test_empty_route_data changed to 503. Remainder of test diffs are additions.</criterion>
+    <criterion id="10">met - guard in plan.py is 3 lines using ApiError, after both _point calls; no SQL added; no new config/dependency/endpoint; seed.py not in git diff.</criterion>
+  </criteria>
+  <test_results>
+    <result>.venv/Scripts/python.exe -m pytest -q -> 216 passed, 1 xfailed, 1 warning (28s)</result>
+    <result>.venv/Scripts/python.exe data/validate.py -> "validate: ok, 9 routes, 226 distinct stops", exit 0</result>
+    <result>git diff --stat -> 9 files, 78 insertions, 13 deletions; no whole-file rewrites; CR counts in edited docs equal HEAD plus added lines (CRLF preserved; only the usual LF-to-CRLF autocrlf warning)</result>
+  </test_results>
+  <runtime_check result="yes">
+    Existing compose stack (api on 8000, db on 5432) was left untouched. Created scratch DB biyahe_verify on the compose Postgres and ran uvicorn on port 8010 with DATABASE_URL pointing at it: empty start (warning, health empty, 503/400, routes []), seeded via python -m data.seed (still empty, still 503), restarted (loaded, plan 200), then blocked the DB (health 200 database down, plan still 200 from memory, reports 422 on a bad body since validation precedes DB). Scratch DB dropped and uvicorn killed afterwards.
+  </runtime_check>
+  <bugs/>
+  <self_critique>
+    Not run: the actual docker compose restart flow (used uvicorn directly); the running compose api container predates these changes and was not rebuilt. DB-down plus empty data was verified only by test, not live. /api/reports returning 503 database_unavailable under a down DB was not observed live (my probe body was invalid, giving 422). The uncommitted diff matches the implementation record.
+  </self_critique>
+</verification>

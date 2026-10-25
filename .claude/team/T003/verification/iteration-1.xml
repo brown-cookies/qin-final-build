@@ -1,0 +1,51 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met - python data/validate.py from repo root and from /tmp cwd, and python -m data.validate: exit 0, "9 routes, 226 distinct stops (462 route stop entries), 48 warning(s)".</criterion>
+    <criterion id="2-16">met - observed: path arg works; a broken copy (bogus source plus a [lat,lng]-swapped point) gave 3 collected ERROR lines naming route_id and index, exit 1, warnings still printed. 152 tests pass incl. tests/data covering the remaining rules (not individually re-run by hand).</criterion>
+    <criterion id="17-18">met - python -m data.seed against fresh scratch DB: "seeded 9 routes, 226 stops, 462 route_stop rows", rc 0; psql counts 9/226/462; line is jsonb array; source memory-traced; 96 repeated (route, stop) pairs (circular routes) inserted fine. Also works on an empty DB (schema applied by seed).</criterion>
+    <criterion id="19">met by tests (not hand-checked).</criterion>
+    <criterion id="20">met - seed twice: md5 of all rows of route, stop, route_stop identical.</criterion>
+    <criterion id="21">met - report row inserted before re-seed is unchanged after.</criterion>
+    <criterion id="22">met - injected bad route_stop row (FK violation) through seed.main: rc 1, "database error, rolled back, old data kept", counts still 9/226/462 and report 1.</criterion>
+    <criterion id="23">met with a cosmetic caveat (see bug 1) - unreachable DB: rc 1, final line "seed: database unreachable, nothing written", no traceback. Missing/empty/invalid geojson: clear message, rc 1, DB untouched.</criterion>
+    <criterion id="24">met by inspection - SQL only in app/queries.py (%s params), seed.py has no SQL, pool closed in finally.</criterion>
+    <criterion id="25">met - .venv/bin/python -m pytest: 152 passed.</criterion>
+    <criterion id="26">met - data/README.md has snap date 2026-10-25, 9-row provenance, pin table, credit + openstreetmap.org/copyright link, re-snap incl. --dry-run/--reuse, known gaps incl. Jurio placeholder 15.1680300,120.5835400. OPEN_ITEMS links to it.</criterion>
+    <criterion id="27">met - grep for "12 route", "Day 1 stub", "not yet available", "seed: Day 2" finds nothing. Only historical roadmap line 41 ("stub it to pass until data exists") remains, which describes the Day 1 plan. CLAUDE.md Commands block lists docker compose run --rm api python -m data.seed and a real validate. SPEC 9.1/9.3 match behaviour seen. DECISIONS.md has Snap, Validate, Seed entries.</criterion>
+    <criterion id="28">met - ci.yml has a `python data/validate.py` step after pytest; test step order unchanged.</criterion>
+  </criteria>
+  <test_results>
+    <result>.venv/bin/python -m pytest -q -> 152 passed</result>
+    <result>python data/validate.py (root, /tmp cwd), python -m data.validate -> exit 0</result>
+    <result>python data/validate.py broken-copy.geojson -> exit 1, 3 errors</result>
+    <result>python -m data.seed (x2, scratch DB biyahe_verify) -> rc 0, identical contents</result>
+    <result>seed with patched bad route_stop -> rc 1, rollback verified</result>
+    <result>python -m data.snap_routes --dry-run -> rc 0, "dry run ok; OSRM not called"</result>
+    <result>snap_routes --dry-run on temp copy without red_back -> rc 1, "missing waypoints for ['red_back']"</result>
+  </test_results>
+  <runtime_check result="yes">
+    Ran validate (3 cwd/invocation styles), seed twice against real Postgres (docker compose db, scratch databases biyahe_verify and biyahe_verify2, not the dev DB), checked row counts, report survival, rollback, bad file, DB down, empty DB, snap_routes dry-run. Not run: the seed inside the api container (docker compose run --rm api), OSRM (forbidden).
+  </runtime_check>
+  <near_duplicate_assessment>
+    The 48 warnings are a data-quality signal, not validate bugs. Most are distinct shop landmarks on the same street (for example 7_eleven_hau vs southstar_drugstore_near_hau, 10 m). The closest pairs (4-11 m) are mostly across different routes in the shared Purple/Grey/Yellow corridor, e.g. puregold (yellow_out) vs villarica (grey_out) 7 m, osave (grey) vs ronnie_battery_center_near_osave (purple) 9 m, balibago_fresh_options (grey) vs icare_wellness (purple) 5 m. These are probably the same physical boarding spot named differently by route, so no shared stop_id and no transfer node between them. Plausible as a hand-traced artifact; the maintainer should review before trusting transfers. Not suppressed, not a spec violation. Display quirk: a pair at 29.6 m prints "only 30 m apart (under 30 m)" because of rounding.
+  </near_duplicate_assessment>
+  <bugs>
+    <bug>
+      <description>Seed with unreachable DB prints several multi-line psycopg_pool "error connecting in pool-1" log blocks before the final clear "seed: database unreachable, nothing written" line. No traceback and rc=1, but criterion 23 asks for a one-line message; cosmetic.</description>
+      <reproduction>DATABASE_URL=postgresql://biyahe:biyahe@localhost:5999/biyahe .venv/bin/python -m data.seed</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+    <bug>
+      <description>Warning text rounds distances: "only 30 m apart (under 30 m)" is printed for pairs whose true distance is just below 30 m (e.g. balibago_cebuana_lhuillier / balibago_pc_logic). Looks contradictory.</description>
+      <reproduction>python data/validate.py | grep "30 m apart"</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+  </bugs>
+  <self_critique>
+    Did not hand-run each of the ~30 validate rule boundaries; relied on the 152 passing tests for those. Did not run seed inside the api container image. Ran the failure scenarios against copies and scratch DBs only. Pass verdict assumes the two low items are non-blocking cosmetic issues.
+  </self_critique>
+</verification>
