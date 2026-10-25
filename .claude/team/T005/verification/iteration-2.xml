@@ -1,0 +1,27 @@
+<verification>
+  <iteration>2</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met - live: empty DB startup logged exactly one WARNING on logger biyahe ("Started with no route data: run the seed command, then restart the api ..."); seeded restart logged only INFO "Loaded 9 routes and 226 stops". caplog test passes.</criterion>
+    <criterion id="2">met - live: /health 200 {"status":"ok","database":"up","route_data":"empty"}; after seed + restart "loaded"; with DB dropped under a loaded app: 200 database down, route_data loaded. Empty+down covered by test_health_down_empty. Literal in schemas.py.</criterion>
+    <criterion id="3">met - live: valid in-bbox plan on empty -> 503 {"error":"route_data_unavailable","message":...} two keys; lat 50 -> 400 invalid_location. Guard sits after both _point calls.</criterion>
+    <criterion id="4">met - full suite green; world-fixture tests unmodified; /api/routes [] when empty (live), route_not_found test added.</criterion>
+    <criterion id="5">met - SPEC 6.6 and Section 12 row present with route_data_unavailable / route_data.</criterion>
+    <criterion id="6">met - Section 14 item 1 has restart step before health/map; item 8 untouched.</criterion>
+    <criterion id="7">met - README quick start + /health row, CLAUDE.md Commands line + /health bullet, all with `docker compose restart api`, same as SPEC.</criterion>
+    <criterion id="8">met - one new DECISIONS.md entry (3 lines), rejects runtime reload and seed-restarts-container, cross-references startup entry.</criterion>
+    <criterion id="9">met - 216 passed, 1 xfailed (known trip 8). Test diff limited to test_health exact bodies (plus new tests; existing tests gained world fixture arg) and test_empty_route_data. Note: test_health_up/down tests gained a `world` fixture parameter so they assert "loaded"; consistent with the spec intent.</criterion>
+    <criterion id="10">met - ApiError path, thin guard, no SQL added, no config/dep changes, no reload endpoint, data/ has no diff (seed.py unchanged). git diff --stat: 9 files, 76 insertions, 12 deletions, no whole-file rewrites.</criterion>
+  </criteria>
+  <test_results>
+    <result>.venv/Scripts/python.exe -m pytest -q -> 216 passed, 1 xfailed</result>
+    <result>python data/validate.py -> ok, 9 routes, 226 stops (48 warnings, pre-existing)</result>
+  </test_results>
+  <runtime_check result="yes">
+    uvicorn on port 8765 against scratch DB scratch_t005 on compose Postgres: empty start (WARNING, health empty, plan 503, bad location 400, routes []), python -m data.seed (health still empty), restart (loaded, no WARNING, plan 200, routes listed), DB dropped with FORCE while loaded (health 200 down, routes 200). Scratch DB dropped; compose stack untouched.
+  </runtime_check>
+  <bugs></bugs>
+  <self_critique>
+    Not run through docker compose images (api container not rebuilt/restarted; the running compose api was left alone). DB-down-while-empty checked only via tests, not live. CRLF check relied on small git diff --stat, not byte inspection.
+  </self_critique>
+</verification>

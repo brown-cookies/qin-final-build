@@ -1,0 +1,51 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>fail</verdict>
+  <criteria>
+    <criterion id="heapq-dijkstra">met - search.find_path uses heapq with lazy deletion, lowest-cost path or None.</criterion>
+    <criterion id="planner-no-db">met - planner imports only heapq, math, collections, and its own modules. No DB or config import.</criterion>
+    <criterion id="graph-built-once">not checked here - graph.py is a pure constructor. Per-query START/END are virtual and never stored in graph.adj. The startup call site is outside the files named.</criterion>
+    <criterion id="thin-router">met - plan.py only validates input, calls graph.stops_within, search.find_path and steps.build_*, and shapes the result. _point is input parsing that the spec requires (criterion 10).</criterion>
+  </criteria>
+  <test_results>
+    <result>python -m pytest tests/planner -q -> 12 passed, 1 warning</result>
+  </test_results>
+  <runtime_check result="not-applicable">Read-only audit. Planner unit tests were run. No service was started.</runtime_check>
+  <findings>
+    <finding id="1" required="no, removable" changes_behavior="yes">
+      ("wk", id) node state in search.py (lines 34-45) and the matching "wk" checks in steps.py (line 24, "at"/"wk"). It stops walk edges from chaining past TRANSFER_RADIUS_M. Spec criterion 1 only says to add at-to-at walk edges within TRANSFER_RADIUS_M. It never forbids chaining, and no spec criterion requires the guard. It is covered by an extra test, test_walk_edges_do_not_chain_past_transfer_radius. Removing it would let A-to-B-to-C walk chains (each hop within radius) win over a ride. That changes planning results only where stops sit in dense clusters. It is the one real design decision beyond plain Dijkstra. It can be defended as intent (a transfer walk is bounded by TRANSFER_RADIUS_M), but it is not spec-mandated. Removing it also makes the steps.py walk_acc accumulation multi-hop capable. Today it only ever sees one hop after an alight.</finding>
+    <finding id="2" required="no, removable" changes_behavior="no">Graph.walk_radius_m is stored in graph.py line 37 and the constructor takes walk_radius_m, but nothing reads it. plan.py takes the radius from get_settings(). This is an unused parameter and attribute.</finding>
+    <finding id="3" required="no, removable" changes_behavior="no (functionally)">The `done` set in search.py is redundant with the `best` comparison. Stale heap entries are already pruned, and re-expanding one is harmless. The tie counter (the `tie` variable and the middle heap tuple element) is only for determinism. The mixed tuple nodes are comparable, so removing it would not raise. It would only change how exact cost ties resolve, and spec says ties may resolve any way.</finding>
+    <finding id="4" required="no, cosmetic" changes_behavior="no">graph.py defines the at() and on() node helpers, but search.py and steps.py use the literal tuples ("at", ...) and the "on" string instead. This is inconsistent and either use is removable. The Stop namedtuple, the haversine_m helper and Graph.stops_within are all used. stops_within is needed for the virtual start/end (criterion 2).</finding>
+    <finding id="5" required="yes" changes_behavior="n/a">Required, not removable: START/END virtual nodes (criterion 2), the transfer, walk and summary logic in steps.py (criteria 5 and 6), the color_label "Dark yellow" mapping, and the START_LABEL/END_LABEL constants. No dead code was found in steps.py. The `cur` variable is used.</finding>
+  </findings>
+  <bugs>
+    <bug>
+      <description>Unrequired ("wk", id) walk-chaining guard in search.find_path (and the "wk" handling in steps.build_steps). Spec criterion 1 only requires at-to-at walk edges within TRANSFER_RADIUS_M and does not forbid chaining. Removing it changes behavior (multi-hop walks become possible).</description>
+      <reproduction>Read app/planner/search.py lines 34-45 and app/planner/steps.py line 24. Remove the "wk" state and run tests/planner. test_walk_edges_do_not_chain_past_transfer_radius would fail.</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+    <bug>
+      <description>Unused Graph parameter and attribute walk_radius_m (graph.py lines 33 and 37). plan.py reads the radius from settings. Removal does not change behavior.</description>
+      <reproduction>grep -rn walk_radius_m app/planner/ shows only the assignment, no reader.</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+    <bug>
+      <description>Redundant `done` set and tie counter in search.find_path. Standard Dijkstra with the `best` check does not need them. The tie counter is only for determinism.</description>
+      <reproduction>Read app/planner/search.py lines 17-24, 46-52.</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+    <bug>
+      <description>The at()/on() helper functions in graph.py are used only inside graph.py. search.py and steps.py hard-code the tuple shapes ("at", id) and ("on", ...). The helpers are partly redundant abstraction and inconsistent with the other modules.</description>
+      <reproduction>grep -n "at(\|on(" app/planner/*.py</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+  </bugs>
+  <self_critique>
+    This was a static read plus the planner unit tests only. I did not remove code to confirm the behavior impact empirically, so the "changes behavior" statements are by inspection. I did not check where the graph is built at startup (app/main.py, which was not in the named files). Whether the guard in finding 1 counts as "beyond what the spec requires" is a judgment call. The caller or user may decide it is intentional.
+  </self_critique>
+</verification>

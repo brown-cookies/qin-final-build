@@ -1,0 +1,16 @@
+<implementation>
+  <iteration>2</iteration>
+  <files>
+    <file path="app/planner/search.py">Stops reached by a walk edge become ("wk", id) nodes that can only board or finish, so walk edges cannot chain (transfer, pre-ride and post-ride walks capped at one hop).</file>
+    <file path="app/planner/steps.py">Treat ("wk", id) like ("at", id) when boarding.</file>
+    <file path="tests/planner/test_planner.py">Regression test: chained 60 m hops beyond TRANSFER_RADIUS_M give no path.</file>
+  </files>
+  <tests><test>tests/planner and full suite pass (see commands).</test></tests>
+  <commands_run><command>python -m pytest tests/planner -q</command><command>python -m pytest -q</command></commands_run>
+  <design_decisions>
+    <decision>Enforce the one-hop limit in search via wk state nodes; rejected changing Graph adjacency (would break the spec edge test and graph shape).</decision>
+    <decision>Bug 2 left unchanged as instructed.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Pre-ride walk is now start walk plus at most one hop; not re-verified live on the seeded DB.</self_critique>
+</implementation>

@@ -1,0 +1,35 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="app/planner/graph.py">Graph builder (at/on nodes, board/ride/alight/walk edges), haversine, stops_within.</file>
+    <file path="app/planner/search.py">heapq Dijkstra with per-query virtual START/END handled outside the shared graph.</file>
+    <file path="app/planner/steps.py">Node path to SPEC 6.3 steps and summary.</file>
+    <file path="app/api/__init__.py">ApiError exception for the single error shape.</file>
+    <file path="app/api/plan.py">GET /api/plan, 400 invalid_location parsing, 404 no_stop_nearby/no_route.</file>
+    <file path="app/api/routes.py">GET /api/routes and /api/routes/{id} from startup data.</file>
+    <file path="app/api/stops.py">GET /api/stops via ILIKE query, in-memory fallback when DB down.</file>
+    <file path="app/queries.py">Added load_route_data and search_stops (escaped literal ILIKE).</file>
+    <file path="app/schemas.py">Added plan step/response, route list/detail, stop models.</file>
+    <file path="app/main.py">load_route_data(app) at startup, ApiError handler, routers registered.</file>
+    <file path="tests/planner/__init__.py">package marker.</file>
+    <file path="tests/planner/conftest.py">no-op override of autouse clean_reports so planner tests need no Postgres.</file>
+    <file path="tests/planner/test_planner.py">unit tests for criteria 1-6.</file>
+    <file path="tests/api/conftest.py">world/empty_world fixtures insert rows and reload app.state data.</file>
+    <file path="tests/api/test_plan_routes_stops.py">API tests for criteria 7-16.</file>
+  </files>
+  <tests>
+    <test>Full suite: 200+ pass; tests/planner passes with Postgres unreachable.</test>
+  </tests>
+  <commands_run>
+    <command>python -m pytest -q</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Route data and graph held on app.state, reloaded in tests by calling main.load_route_data; rejected a reload endpoint.</decision>
+    <decision>Virtual start/end handled inside Dijkstra as synthetic edges; rejected mutating the shared adjacency lists.</decision>
+    <decision>Stop search ordered with COLLATE "C" in SQL to match Python sort in the memory fallback.</decision>
+    <decision>Plan params taken as raw strings and parsed in the router for 400 instead of FastAPI float validation (422).</decision>
+    <decision>stops_passed = number of stops after the boarding stop, up to and including alight stop.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Memory fallback for /api/stops is only tested via db_down; transfer-by-walk and pre-ride at-to-at walk branches in steps.py are lightly covered. Docs (README rows, DECISIONS) not updated.</self_critique>
+</implementation>

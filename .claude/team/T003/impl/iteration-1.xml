@@ -1,0 +1,26 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="tests/data/test_validate.py">fixed test_all_problems_reported_together: trim to 1 stop (popping one left 2, which is valid)</file>
+    <file path="data/validate.py">audited, no change in this pass</file>
+    <file path="data/seed.py">audited, no change in this pass</file>
+    <file path="app/queries.py">audited, no change in this pass</file>
+    <file path="data/README.md">audited, no change</file>
+    <file path="docs/OPEN_ITEMS.md">audited: already links to data/README.md#pin-table, no second copy</file>
+    <file path="CLAUDE.md, README.md, SPEC.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/roadmap.md">audited against criteria 27; consistent, no stale phrases</file>
+    <file path=".github/workflows/ci.yml">already runs python data/validate.py; unchanged</file>
+  </files>
+  <tests>
+    <test>.venv/bin/python -m pytest: 152 passed (incl. tests/data, committed geojson validity, subprocess run)</test>
+  </tests>
+  <commands_run>
+    <command>python data/validate.py (exit 0: 9 routes, 226 stops, 48 warnings), also from /tmp cwd</command>
+    <command>.venv/bin/python -m pytest -q</command>
+    <command>grep for stale phrases across *.md and ci.yml: none</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Fixed the test rather than the code: a route with 2 stops is valid, so the test now leaves 1 stop.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Docs audit was by diff reading and grep, not line-by-line against every criterion; docker compose seed command not run in a container.</self_critique>
+</implementation>

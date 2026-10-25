@@ -1,0 +1,27 @@
+<implementation>
+  <iteration>2</iteration>
+  <files>
+    <file path="app/main.py">load_route_data logs one WARNING when zero routes; /health adds route_data from app.state.routes</file>
+    <file path="app/schemas.py">HealthResponse.route_data Literal["loaded","empty"]</file>
+    <file path="app/api/plan.py">thin guard after both _point validations: 503 route_data_unavailable via ApiError; 503 in responses</file>
+    <file path="tests/api/test_health.py">exact bodies include route_data (deliberate, criterion 9); added empty up/down cases</file>
+    <file path="tests/api/test_plan_routes_stops.py">test_empty_route_data now 503 (deliberate); added invalid-location-wins, db-down-empty, caplog warning tests</file>
+    <file path="SPEC.md">6.6 field, Section 12 row, Section 14 item 1 restart step</file>
+    <file path="README.md">quick start restart line, /health row, error code list</file>
+    <file path="CLAUDE.md">Commands restart line, /health bullet</file>
+    <file path="docs/DECISIONS.md">new entry "Empty route data signal" cross-referencing the startup entry</file>
+  </files>
+  <tests>
+    <test>Full suite: 216 passed, 1 xfailed (known trip 8). Criteria 1-4, 9 covered.</test>
+  </tests>
+  <commands_run>
+    <command>.venv/Scripts/python.exe -m pytest -q</command>
+    <command>git diff --stat (no whole-file rewrites; docs edited with CRLF preserved)</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Warning inside load_route_data, not lifespan, so tests can call the loader; rejected lifespan-only.</decision>
+    <decision>Guard in router reading app.state.routes; rejected a new helper.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Not checked against a live docker compose stack. Docs edited after the final pytest run (docs only).</self_critique>
+</implementation>

@@ -1,0 +1,56 @@
+<spec>
+  <user_stories>
+    - As an operator who runs `docker compose up` and then the seed command, I am told (in the log, in /health, and in the docs) that the running API loaded no route data and must be restarted, instead of the API silently looking healthy.
+    - As a commuter or client calling /api/plan while the server holds no route data, I get an error that says the service has no route data, not one that blames my location.
+    - As a maintainer, I can read the restart-after-seed step in README, CLAUDE.md Commands, and SPEC, and find the decision recorded in DECISIONS.md.
+  </user_stories>
+
+  <acceptance_criteria>
+    1. Startup warning: when the startup load (app/main.py lifespan) yields zero routes, the app still starts and logs exactly one WARNING-level record on logger "biyahe" whose text contains "no route data" and the words "seed" and "restart". With one or more routes loaded, no such WARNING is logged and the existing INFO "Loaded N routes and M stops" line is unchanged. Pass: test using caplog with empty tables asserts a WARNING record; test with seeded tables asserts none.
+    2. Health field: GET /health returns 200 {"status":"ok","database":"up|down","route_data":"loaded|empty"}. route_data is "empty" when the in-memory startup data has zero routes, otherwise "loaded". It is computed from startup data only (no DB query), so it is correct when the database is down. HealthResponse in app/schemas.py gets the field as Literal["loaded","empty"]. Pass: API tests assert the exact body with empty data (up and down) and with loaded data (up and down); /health is still 200 with the db_down fixture.
+    3. Plan while empty: when the in-memory data has zero routes, GET /api/plan with otherwise valid input returns 503 {"error":"route_data_unavailable","message":<plain text saying route data is not loaded and the service needs a restart or re-seed>}. The check happens after invalid_location validation: an out-of-bbox or malformed request still returns 400 invalid_location, even when empty. Pass: API tests for in-bbox valid query (503, code, shape has exactly the two keys) and for an out-of-bbox query (400) with empty data.
+    4. No regression with data loaded: with at least one route loaded, /api/plan behaves as before (200, 400 invalid_location, 404 no_stop_nearby, 404 no_route). /api/routes still returns 200 [] when empty, and /api/stops and /api/routes/{id} are unchanged (route_not_found 404 for any id when empty). Pass: existing tests using the "world" fixture pass unmodified.
+    5. SPEC Section 12 gets a row: "No route data loaded at startup (database reachable but unseeded when the process started) | 503 route_data_unavailable on /api/plan; /api/routes returns []; /health shows route_data: empty; a WARNING is logged". SPEC Section 6.6 (/health) shows the new field and its meaning. The error code is listed in SPEC Section 12 in the same change. Pass: grep of SPEC.md finds route_data_unavailable and route_data in those sections.
+    6. SPEC Section 14: item 1 says to run `docker compose up`, then the seed command, then restart the api (`docker compose restart api`), and then expect /health with database up and route_data loaded and six colored lines on the map. Item 8 (no_stop_nearby) is unchanged. Section 14 gains no extra item unless needed; if a traceability row refers to /health, it mentions the field. Pass: reading the section shows the restart step before the first /api/plan use.
+    7. Docs: README (quick start and the /health endpoint row), the CLAUDE.md Commands block (the seed line) and the "easy-to-get-wrong" /health bullet each state that the API must be restarted after seeding because route data is loaded once at startup, and mention route_data. SPEC and CLAUDE.md agree on the exact restart command. Pass: grep finds "restart" next to the seed command in README and CLAUDE.md.
+    8. DECISIONS.md: one new entry (what, why, rejected alternative, 3 lines) for the empty-data signal. Rejected alternatives: a runtime reload path, and having the seed command restart the container. The existing restart-rule note is cross-referenced rather than duplicated. Pass: entry present.
+    9. Existing tests: the 211 existing tests pass except three assertions that this change deliberately replaces: tests/api/test_health.py exact-body assertions (lines 4 and 10, now include route_data) and tests/api/test_plan_routes_stops.py::test_empty_route_data (plan on empty data is now 503 route_data_unavailable, not 404 no_stop_nearby). All other tests are untouched. Pass: full pytest is green and the diff to existing tests is limited to those assertions.
+    10. Error shape and rules: the new 503 uses the existing ApiError path and the single {"error","message"} shape; the router adds only a thin guard; no SQL is added outside queries.py; no new config variable, no new dependency, no reload endpoint, and seed.py is unchanged. Pass: code review plus the tests above.
+  </acceptance_criteria>
+
+  <assumptions>
+    - Field name route_data with values "loaded" and "empty" (mirrors the up/down string style of "database"), not a count or boolean. Chosen as the minimal additive shape.
+    - Error code route_data_unavailable with status 503: 5xx because the cause is server state, not the caller. This deliberately supersedes T004 criterion 8 (empty data gave 404 no_stop_nearby), which was misleading.
+    - "Empty" means zero routes in the startup data. Routes present with zero stops is not a separate state.
+    - route_data reflects the state at process startup, not the database's current contents. After a seed in another process, /health still says "empty" until restart; that is the intended signal.
+    - Restart command documented is `docker compose restart api`. Stopping and re-running `docker compose up` is equivalent.
+    - /health status stays "ok" when route_data is empty (the process is up); the new field carries the signal, so existing monitors keyed on status/200 are unaffected.
+    - Because the test client fixture may start with an empty route set, tests that need loaded data use the existing world fixture; the caplog test calls the loader or lifespan with empty tables.
+    - Day 3 items (map page, final checklist run, test trips) are out of scope. T004 spec.xml is not edited.
+  </assumptions>
+
+  <edge_cases>
+    - Fresh volume: up, then seed, with no restart. /health shows route_data empty, the log has the WARNING, and /api/plan returns 503, not 404.
+    - After a restart following the seed: route_data loaded, no WARNING, /api/plan works.
+    - Database down and route_data empty: /health is 200 with database "down" and route_data "empty"; /api/plan is 503 route_data_unavailable (not database_unavailable).
+    - Malformed or out-of-bbox plan input while empty: 400 invalid_location takes precedence.
+    - Seed run while the API is up and loaded: no change in the running API (no reload), route_data stays "loaded".
+    - Unknown route_id while empty: still 404 route_not_found.
+  </edge_cases>
+
+  <risks>
+    <risk severity="medium">Three existing assertions must change (health body equality, empty-data plan status). If a reviewer reads "211 tests unchanged" literally this conflicts; it is stated explicitly in criterion 9.</risk>
+    <risk severity="low">The in-memory "empty" state is only fixed by a restart; an operator who ignores the signal still has a dead plan endpoint. The 503 message must name the restart/seed action to reduce this.</risk>
+    <risk severity="low">Adding a field to /health changes the response shape for any external consumer comparing the body exactly; none exist in the repo besides tests.</risk>
+    <risk severity="low">The map page (Day 3) will receive 503 or [] when empty and should surface it; out of scope here.</risk>
+  </risks>
+
+  <dependencies>
+    - Files: app/main.py (lifespan load, health), app/api/plan.py (guard), app/schemas.py (HealthResponse), SPEC.md (6.6, 12, 14), README.md, CLAUDE.md, docs/DECISIONS.md, tests/api/test_health.py, tests/api/test_plan_routes_stops.py, tests/conftest.py (empty_world fixture, if present).
+    - No new packages or services.
+  </dependencies>
+
+  <self_critique>
+    Stories map to criteria: operator signal (1, 2, 5, 6), commuter error (3, 4), documentation and decision record (5-8); existing-test handling in 9. All are pass/fail testable. Biggest remaining risk is the choice to include the optional 503 (criterion 3): it changes the API and supersedes T004 criterion 8, so if the caller wants strictly zero behavior change to /api/plan, criteria 3, 4 and part of 9 and 5 should be dropped, and the "empty" test left as is. The field and code names are a judgement call and are recorded as assumptions rather than blocking questions.
+  </self_critique>
+</spec>

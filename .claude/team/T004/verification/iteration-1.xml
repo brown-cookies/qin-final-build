@@ -1,0 +1,44 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>fail</verdict>
+  <criteria>
+    <criterion id="1-6">met - tests/planner 11 pass with no Postgres needed (planner imports only math/heapq/collections and app.planner.graph).</criterion>
+    <criterion id="7">met - live: with Postgres stopped, /api/plan, /api/routes, /api/routes/blue_out, /api/stops?q=pam all 200 from startup data.</criterion>
+    <criterion id="8">met per API tests (full suite pass); not re-run live.</criterion>
+    <criterion id="9">met - live plans return walk/ride/walk and walk/ride/transfer/ride/walk with SPEC 6.3 shapes; summary strings in expected style.</criterion>
+    <criterion id="10">met - live: abc, missing params, nan, 1e999, out-of-bbox all 400 invalid_location.</criterion>
+    <criterion id="11">met - live: start-far gives "starting point" message, end-far gives "destination" message, 404 no_stop_nearby.</criterion>
+    <criterion id="12">met per API tests (not reproducible on the real seed).</criterion>
+    <criterion id="13">met - live: /api/routes returns 9 items ordered by route_id with stop_count.</criterion>
+    <criterion id="14">met - live: LineString first; YELLOW_out and SQL-injection id give 404 route_not_found; a%2Fb gives 404 not_found.</criterion>
+    <criterion id="15">met - live: partial match, %, quote, whitespace q, missing q (422 validation_error) behave per spec.</criterion>
+    <criterion id="16">met - live with db stopped: /health 200 database down, /api/reports 503 database_unavailable, others 200.</criterion>
+    <criterion id="17">met - single error shape observed everywhere; routers use queries/planner; no SQL outside app/queries.py (grep); Pydantic models in app/schemas.py.</criterion>
+    <criterion id="18">met - radii/penalty/factor passed as args from get_settings().</criterion>
+    <criterion id="19">met - full suite passes; tests/planner passes standalone.</criterion>
+  </criteria>
+  <test_results>
+    <result>python -m pytest -q -> 200 passed, 1 warning (21.9s)</result>
+    <result>python -m pytest tests/planner -q -> 11 passed</result>
+  </test_results>
+  <runtime_check result="yes">
+    Seeded dev DB (python -m data.seed: 9 routes, 226 stops, 462 route_stop), ran uvicorn, curled /api/plan (one-jeep, two-jeep, errors), /api/routes, /api/routes/{id}, /api/stops. Then stopped the Postgres container with the server already running and confirmed the 200/503 split; db container restarted afterwards.
+  </runtime_check>
+  <bugs>
+    <bug>
+      <description>Chained at-to-at walk edges let the planner string together many stop-to-stop hops (each under TRANSFER_RADIUS_M=100) into one long walk, so a "transfer" step reports walk_m far above the transfer radius (511 m Pampang to Angeles Sapangbato Terminal via 7 hops). The same chaining happens in the pre-ride and post-ride walk sections. Each edge meets criterion 1, but the whole walk contradicts the intent that transfers walk at most TRANSFER_RADIUS_M, and it is far beyond WALK_RADIUS_M-style limits.</description>
+      <reproduction>Run the service on the seeded DB: curl "http://127.0.0.1:8765/api/plan?from_lat=15.1621338&amp;from_lng=120.6079997&amp;to_lat=15.1482&amp;to_lng=120.5744" -> steps contain {"type":"transfer","from":"Pampang","to":"Angeles Sapangbato Terminal","walk_m":511,"to_color":"red"}. Path walks pampang-puregold-young_bookstore-jollibee_rizal_street-dainty_china_house-diamond_home_plaza-addessa-angeles_sapangbato_terminal.</reproduction>
+      <severity>medium</severity>
+      <owner>implementer</owner>
+    </bug>
+    <bug>
+      <description>When start and end are near the same stop (no ride), the response is two walk steps "Walk to Pampang, walk to your destination." This follows the recorded assumption, so it is not a spec violation, but it is awkward UX; reported for the user's decision only.</description>
+      <reproduction>curl "http://127.0.0.1:8765/api/plan?from_lat=15.1379&amp;from_lng=120.5889&amp;to_lat=15.1379&amp;to_lng=120.5889"</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+  </bugs>
+  <self_critique>
+    Did not run the GitHub CI or Docker image build. no_route and empty-data behavior were verified only through the existing tests, not live. Concurrency (criterion 2 under threads) not stress-tested. The chained-walk finding depends on the real seed's dense stop spacing. Seeding changed the dev database "biyahe" (re-runnable, expected).
+  </self_critique>
+</verification>

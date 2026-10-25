@@ -1,0 +1,36 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met - tests/test_config.py (defaults, overrides, invalid values) pass; defaults only in app/config.py; grep of app/ finds no other tunable constants (pool max_size=5/min_size=1 are internal).</criterion>
+    <criterion id="2">met - sql/schema.sql read: 4 tables IF NOT EXISTS, defaults, created_at DESC index; tests/api/test_schema.py passes (apply twice, tables exist, rows kept). Compose stack restarted against same volume with schema re-applied, no error.</criterion>
+    <criterion id="3">met - docker compose run --rm -e DATABASE_URL=postgresql://x:y@127.0.0.1:1/z api uvicorn app.main:app: log "ERROR:biyahe:Database unreachable at startup, exiting: could not connect within the pool timeout", exit code 3 (uvicorn maps SystemExit from lifespan; non-zero). A traceback follows the log line (allowed by spec). Bad SERVICE_BBOX and GRAPH_MODE also log "Invalid configuration, exiting" and exit non-zero.</criterion>
+    <criterion id="4">met - live: /health 200 {"status":"ok","database":"up"}; after docker compose stop db: 200 {"status":"ok","database":"down"} (3.0s); after start db: back to "up" without API restart. Test suite covers it too.</criterion>
+    <criterion id="5">met - live POST returned 201 with exactly report_id,route_color,message,lat,lng,status=new,created_at (ISO, Z); psql row matched; message stripped, unicode and SQL metacharacters stored verbatim; no-coords and null/null give lat/lng null; bbox edge (15.08,120.68) accepted; 500 chars accepted.</criterion>
+    <criterion id="6">met - live 422 validation_error for: empty, whitespace-only, 501 chars, pink, YELLOW, lat-only, lng-only, each of 4 bbox bounds, non-numeric lat, missing message, missing route_color, extra field, lat=0/lng=0, one null, non-JSON, truncated JSON. Row count in psql after: 17 = exactly the 5 valid + 12 list-test inserts, so no rows from invalid requests.</criterion>
+    <criterion id="7">met - with 12 extra rows and no limit: 10 returned, newest first (m12..m3); limit=50 returned all 17.</criterion>
+    <criterion id="8">met - limit=1 and 50 200; 0, 51, -1, abc each 422 validation_error; empty table returned [] (200).</criterion>
+    <criterion id="9">met - with db stopped: POST valid 503 database_unavailable (~3.0s, bounded), GET 503 (~3.0s); POST with invalid body and limit=0 still 422. Recovery after restart: 200 without API restart.</criterion>
+    <criterion id="10">met - observed bodies exactly {error,message} for 422 (body and query), 404 not_found (/nope, /api/plan), 405 method_not_allowed (DELETE /health, DELETE and PUT /api/reports), 503; 500 covered by test_errors. No "detail" key seen.</criterion>
+    <criterion id="11">met - tests/api/test_errors.py::test_unhandled_exception_500_does_not_leak passes (500 internal_error, no secret/traceback in body, secret in log).</criterion>
+    <criterion id="12">met - grep for SQL keywords in app/api, main.py, db.py, schemas.py, config.py: none. queries.py: all values via %s, no f-strings/.format (grep empty); only dynamic part is schema file text. Routers are one-line calls.</criterion>
+    <criterion id="13">met - ReportCreate extra="forbid" (live: foo field 422); one model per request/response in schemas.py; /openapi.json paths = [/health, /api/reports]; /docs 200.</criterion>
+    <criterion id="14">met - clean-volume `docker compose up -d --build` (API_PORT=18123, POSTGRES_PORT=15433, project t001verif) came up with no manual step, api healthy, /health up. Compose gates api on db service_healthy, restart unless-stopped. Default port 8000 not exercised (in use on this machine) but is the compose default. Dockerfile pinned python:3.12.12-slim-bookworm, port 8000.</criterion>
+    <criterion id="15">met - pytest from repo root: 68 passed (Python 3.14.5 venv, pins installed, Postgres 16.13 container on 55433, TEST_DATABASE_URL). conftest rejects non-_test DB names; DB-down simulated in-process.</criterion>
+    <criterion id="16">met (statically plus local equivalence) - ci.yml read: push and pull_request, postgres service with health options, pip install -r requirements.txt, pytest, python data/validate.py, python 3.12 matching Dockerfile. pytest and validate.py commands run locally in that order (pytest passed; validate.py exits 0 by inspection). GitHub run not performed.</criterion>
+    <criterion id="17">met - files per file_list exist (web/.gitkeep placeholder), no planner logic, no plan/routes/stops endpoints (/api/plan returns 404), no geojson files. CLAUDE.md Commands block accurate, seed marked Day 2.</criterion>
+    <criterion id="18">met - only dev credentials biyahe/biyahe; .env.example lists all Sec 10 vars; .gitignore covers .env, __pycache__, venvs, .pytest_cache.</criterion>
+  </criteria>
+  <test_results>
+    <result>pytest -q -p no:cacheprovider (TEST_DATABASE_URL to fresh postgres:16.13-alpine) -> 68 passed, 1 warning (starlette httpx deprecation)</result>
+    <result>docker compose up -d --build (clean volume) -> db healthy, api healthy, /health up</result>
+    <result>live curl matrix of 20+ POST cases, limits, 404/405, DB stop/start, bad DATABASE_URL, bad SERVICE_BBOX, bad GRAPH_MODE -> as described per criterion</result>
+  </test_results>
+  <runtime_check result="yes">
+    Ran the real compose stack and drove all flows listed above; cleaned up (compose down -v, verification postgres container removed, built image removed).
+  </runtime_check>
+  <bugs></bugs>
+  <self_critique>
+    Not tested: real GitHub Actions run; Python 3.12 pytest outside Docker (image ran app on 3.12, tests on 3.14); host port 8000 default; the race case of Postgres slower than API under compose (healthcheck gating means it is not exercised; restart policy is only read); concurrent inserts; pool exhaustion. Unauthored deviations are documented by the implementer (DB_POOL_TIMEOUT_S, not_found/method_not_allowed, absent from SPEC Sec 10/12; spec reconciliation still pending, not a runtime failure). The traceback after the startup log line is noise but spec permits it. Note .claude/ and .remember/ are in .gitignore.
+  </self_critique>
+</verification>

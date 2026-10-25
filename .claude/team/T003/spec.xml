@@ -1,0 +1,99 @@
+<spec>
+  <user_stories>
+    <story>As the maintainer, I run `python data/validate.py` (no DB, no network, from repo root) and get a clear per-problem failure message and non-zero exit when routes.geojson breaks any SPEC 9.3 rule, so bad data never reaches CI-green.</story>
+    <story>As the maintainer, I run `python -m data.seed` (or via docker compose run --rm api) and the route, stop and route_stop tables are replaced atomically from routes.geojson without touching reports; I can re-run it any time.</story>
+    <story>As a contributor, I read data/README.md and learn provenance, the pin table, the OSM/ODbL credit, how to re-snap, and the known gaps.</story>
+    <story>As a reader, SPEC.md, CLAUDE.md, README.md and docs/* all agree with the code (9 route records, seed available, validate real).</story>
+  </user_stories>
+
+  <files>
+    <file action="replace">data/validate.py (stub to real)</file>
+    <file action="create">data/seed.py</file>
+    <file action="edit">app/queries.py (add the seed SQL function; SQL stays out of data/seed.py per hard rule 2)</file>
+    <file action="create">tests/data/__init__.py, tests/data/test_validate.py, tests/data/test_seed.py (plus a small fixture helper that builds a valid in-memory FeatureCollection and writes variants to tmp_path)</file>
+    <file action="create">data/README.md</file>
+    <file action="edit">.github/workflows/ci.yml (validate step real; no OSRM, no DB needed by it)</file>
+    <file action="edit">SPEC.md, CLAUDE.md (Commands block), README.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/OPEN_ITEMS.md, docs/roadmap.md</file>
+    <file action="no change expected">sql/schema.sql (no change needed: PK is (route_id, seq), report has no FK to route/stop), data/snap_routes.py, data/raw/waypoints.csv, data/routes/routes.geojson</file>
+  </files>
+
+  <acceptance_criteria>
+    <criterion n="1">`python data/validate.py` run from repo root (also `python -m data.validate`) against the committed data/routes/routes.geojson exits 0 with a short summary (route count, stop count, warnings), with no DB and no network. The CI step `python data/validate.py` works as written (script invocation must be able to import app.config for SERVICE_BBOX).</criterion>
+    <criterion n="2">validate accepts an optional path argument to the geojson file (default data/routes/routes.geojson) so tests can feed variants. Each failure prints one line per problem naming the route_id (and seq/stop_id where relevant) and the exit code is non-zero (1). All problems are collected and reported together, not just the first.</criterion>
+    <criterion n="3">File-level failures, each non-zero exit with a clear message and no traceback: file missing; empty file; not valid JSON; top-level not a FeatureCollection with a `features` list; a feature whose geometry type is not LineString; a LineString with fewer than 2 coordinates; zero features.</criterion>
+    <criterion n="4">Bbox: any line coordinate or stop lat/lng outside SERVICE_BBOX fails. Bbox is read via app.config (load_settings / env SERVICE_BBOX), order lat_min,lat_max,lng_min,lng_max, not hardcoded. Test with a point that is in-box only if lat/lng are not swapped, so a [lat,lng] mix-up on the line (GeoJSON is [lng,lat]) is caught.</criterion>
+    <criterion n="5">Non-numeric, null, NaN, Infinity, bool or missing coordinates (in line points or stop lat/lng) fail with a message, not a crash.</criterion>
+    <criterion n="6">Stop seq: stops are checked in list order as seq 1..n (the geojson stops array has no explicit seq; seq is the 1-based index). A gap/"not starting at 1" failure applies where an explicit `seq` is present on stop objects; if absent, order index is used. Tests must cover seq gap and seq not starting at 1 using an explicit `seq` key on stop objects (validate tolerates and checks an optional `seq`; seed ignores it and uses list order). See decisions D1.</criterion>
+    <criterion n="7">A route with fewer than 2 stops fails.</criterion>
+    <criterion n="8">Registry: route_id must match {color}_{direction}, split on the LAST underscore; color must be one of the six, direction out/back. All 9 registry IDs must be present (a missing one fails and is named). yellow_back, purple_back, grey_back fail; any unknown route_id (e.g. "orange_out", "nounderscore") fails. properties.color/direction must equal the values derived from route_id, and name must equal the registry name for the color.</criterion>
+    <criterion n="9">Missing any SPEC 9.1 property (route_id, color, direction, name, source, verified_on, osm_relation_id, stops; and per stop: stop_id, name, lat, lng, osm_node_id) fails naming the property. Present-with-null is fine for verified_on, osm_relation_id, osm_node_id. `source` must be "memory-traced" (fail otherwise); osm_relation_id/osm_node_id must be null. Empty/non-string stop_id or name fails.</criterion>
+    <criterion n="10">Two features sharing a route_id fails (duplicate route_id).</criterion>
+    <criterion n="11">Same stop_id on two different routes with coordinates more than 100 m apart fails (haversine). The real 55 m Pampang case (yellow_out vs blue_out/blue_back) and the 26 m Red Terminal case pass. Exactly 100 m is a pass (strictly greater fails).</criterion>
+    <criterion n="12">Line gap: any consecutive pair of line points more than 50 m apart fails, naming route_id and the index. Exactly 50 m passes.</criterion>
+    <criterion n="13">Stop-to-line: a stop more than 100 m from the nearest point of its own route line fails, naming route_id and stop_id. Distance is to the nearest densified line point (vertex), as the line is densified to at most 40 m; no segment projection required. A stop exactly 100 m away passes.</criterion>
+    <criterion n="14">Warning (exit stays 0): two DIFFERENT stop_ids (across the whole file, including within one route) whose coordinates are closer than 30 m print a line starting with "WARNING". The same stop_id appearing twice on one route (circular return pass) or on several routes produces no warning and no failure. Warnings never change the exit code, but if there is also a failure the warnings are still printed.</criterion>
+    <criterion n="15">Circular routes: a stop_id repeated at two positions on one route is valid for validate (no duplicate-stop failure, no seq error). Both occurrences are checked for stop-to-line distance.</criterion>
+    <criterion n="16">Passing-file test: a minimal valid FeatureCollection with all 9 registry routes exits 0. The committed routes.geojson is also asserted valid by a test (guards drift between snapshot and rules).</criterion>
+    <criterion n="17">`python -m data.seed` loads routes.geojson (optional path arg), runs the validate checks first and refuses (non-zero, nothing written) if they fail, applies sql/schema.sql (idempotent) so it also works against an empty database, then replaces route/stop/route_stop in ONE transaction: DELETE route_stop, DELETE route, DELETE stop, INSERT stop, INSERT route, INSERT route_stop. Prints counts (routes, stops, route_stop rows). Exit 0.</criterion>
+    <criterion n="18">Seed result against the committed file: 9 route rows; one stop row per distinct stop_id (fewer than total route_stop-linked stop entries because of shared stops); route_stop rows = sum of stops entries over all routes, with seq = 1-based list order per route. Circular routes insert the same stop_id at two seq values without error. route.line stored as jsonb [[lng,lat],...]; source, verified_on, osm_relation_id copied; stop.osm_node_id copied.</criterion>
+    <criterion n="19">Shared stop rows: exactly one stop row per stop_id. The winning name/lat/lng is the first occurrence when features are processed in sorted route_id order and stops in list order (deterministic, independent of file order). Test: two routes with the same stop_id at different coordinates (within 100 m) yields the coordinates of the lexicographically smaller route_id.</criterion>
+    <criterion n="20">Re-run idempotent: running seed twice leaves identical table contents (same row counts and values), no duplicate-key errors.</criterion>
+    <criterion n="21">Report rows survive: report rows inserted before a seed (and before a re-seed) are unchanged afterwards (count and content). Seed never issues any statement on report (test may also check no report FK exists, so replacement is never blocked).</criterion>
+    <criterion n="22">Atomic rollback: a failure mid-way (e.g. a route_stop insert violating a constraint, or an injected exception after the DELETEs) leaves the previous route/stop/route_stop data fully intact and exits non-zero with a clear log line. Test seeds good data, then seeds a file that fails during the transaction (bypassing or with validation disabled via the underlying queries function), and asserts old rows remain.</criterion>
+    <criterion n="23">Seed with the database unreachable: no traceback; a clear one-line log message and non-zero exit. Seed with a missing/invalid geojson: clear message, non-zero exit, DB untouched. Database URL comes from DATABASE_URL via app.config (default as in config); tests point it at TEST_DATABASE_URL.</criterion>
+    <criterion n="24">Hard rules: all seed SQL lives in app/queries.py, parameterised with %s (no string formatting of values); data/seed.py contains no SQL text; no new dependencies in requirements.txt; no ORM; planner untouched. Seed uses the existing app.db pool (init_pool / close_pool), with pool closed on exit.</criterion>
+    <criterion n="25">Existing test suite still passes; new tests under tests/data/ pass with `pytest` against the Postgres test DB. Test fixtures for seed clean route/stop/route_stop before/after (without breaking the autouse clean_reports fixture) and do not leave seed data that breaks other tests. validate tests need no DB.</criterion>
+    <criterion n="26">data/README.md exists and contains: provenance table (snap date 2026-10-25; each of the 9 route records with source "memory-traced", not ridden/unverified, listed as known gaps); the pin table copied from docs/OPEN_ITEMS.md, with README as the single source (OPEN_ITEMS links to it instead of duplicating); the credit "(c) OpenStreetMap contributors" and an ODbL/OSM copyright link, stating line geometry comes from OSRM on OSM road data and stop positions are hand-placed; how to re-snap (waypoints.csv edit, snap_routes.py, validate, seed, including --dry-run/--reuse); known gaps: Checkpoint/Highway not named stops, Jurio Foodhouse placeholder pin (15.1680300,120.5835400), blue out/back direction vs SPEC registry unresolved.</criterion>
+    <criterion n="27">Anti-drift greps return nothing stale across *.md, ci.yml: "12 routes"/"12 route records", "Day 1 stub", "not yet available", "seed: Day 2". CLAUDE.md Commands block shows `docker compose run --rm api python -m data.seed` as available and validate as real (not stub, exits non-zero on failure). SPEC Section 9.2/9.3 describes validate additions actually implemented (30 m warning, source/null checks, optional-seq handling, seed runs validation first, schema applied by seed, tie-break rule for shared stops, circular route handling); SPEC and code agree on every rule and threshold. docs/DECISIONS.md has entries (what / why / rejected alternative, 3 lines) for snap densify+join check, validate, seed. docs/ARCHITECTURE.md pipeline section matches. roadmap and OPEN_ITEMS mark Day 2 Track A items done/open accurately. README.md has the seed command and mentions validate.</criterion>
+    <criterion n="28">CI: ci.yml runs `python data/validate.py` as a real step (after checkout/install, no OSRM, no network beyond pip); a failing validation fails the job. Test step order unchanged.</criterion>
+  </acceptance_criteria>
+
+  <decisions>
+    <decision id="D1">The geojson stop objects carry no seq in SPEC 9.1; seq = 1-based list index and cannot gap in a file produced by snap_routes. The request still requires gap and "not starting at 1" tests. Resolution: validate also validates waypoints.csv-independent data only, so it accepts an OPTIONAL integer `seq` on each stop object; when present it must equal 1..n in order (gap, duplicate, or not starting at 1 fails); when absent, list index is used. SPEC 9.1 notes that `seq` is optional and ignored by seed. (Alternative if implementer prefers: validate data/raw/waypoints.csv seq too; either way the tests must exercise both failure kinds. Do not change snap_routes output.)</decision>
+    <decision id="D2">Seed SQL lives in app/queries.py as one function taking the parsed features (plain data) and doing everything in one db.connection() block (commit on success, rollback on exception). data/seed.py only parses, validates, calls it, and reports.</decision>
+    <decision id="D3">Shared stop coordinates: first occurrence by sorted route_id then list order wins. Documented in SPEC 9.3, data/README.md and DECISIONS.</decision>
+    <decision id="D4">report has no FK to route or stop in sql/schema.sql, so DELETE/INSERT replacement is never blocked; if a future FK is added it must not block replacement (note in DECISIONS).</decision>
+    <decision id="D5">Seed validates first and applies the idempotent schema itself (the api container may not have started yet). The validation logic is shared by importing it from data/validate.py; no duplicate rule implementation.</decision>
+    <decision id="D6">Line-to-stop and join distances use haversine to the nearest densified line point (matches snap_routes.dist_m and check_joins); no segment projection.</decision>
+    <decision id="D7">Blue out/back direction vs registry (Pandan to Pampang): left as is, recorded as known gap in data/README.md and OPEN_ITEMS. Not blocking.</decision>
+  </decisions>
+
+  <assumptions>
+    <assumption>The committed routes.geojson (snapped 2026-10-25) passes all validate rules; if it does not, that is a data finding to report, not to hide by loosening a threshold or editing snap output.</assumption>
+    <assumption>Thresholds (100 m, 50 m, 30 m) are fixed by SPEC 9.3 and are module constants in validate.py, not env tunables (SPEC Section 10 does not list them); SERVICE_BBOX is the only config read.</assumption>
+    <assumption>The Docker image already copies data/ (Dockerfile COPY data ./data), so `docker compose run --rm api python -m data.seed` works without Dockerfile changes; Dockerfile pins stay as-is.</assumption>
+    <assumption>Nothing is committed or pushed; OSRM is not called.</assumption>
+  </assumptions>
+
+  <edge_cases>
+    <case>Stop lat/lng keys vs GeoJSON [lng,lat] order: swapped order must be caught by bbox.</case>
+    <case>route_id "darkyellow_out" splits to darkyellow/out; ids with no underscore or extra underscores ("dark_yellow_out") fail as unknown.</case>
+    <case>Circular route repeating a stop_id: not a duplicate for validate, seed or the near-duplicate warning.</case>
+    <case>Two different stop_ids under 30 m (including Jurio Foodhouse placeholder neighbours) only warn.</case>
+    <case>Boundary values exactly 100/50/30 m behave as stated (30 m: warn only if strictly less).</case>
+    <case>Features with a stops list that is missing or not a list; properties not an object; feature with null geometry.</case>
+    <case>validate run from a different cwd or as a script must still import app.config and find the default file path relative to the module, not cwd.</case>
+    <case>Seed against a DB where tables are empty, already populated, or missing (schema applied).</case>
+    <case>Seed interrupted mid-transaction leaves old data; reports untouched throughout.</case>
+    <case>Unicode in stop names (non-ASCII) and apostrophes round-trip through seed via parameters.</case>
+  </edge_cases>
+
+  <risks>
+    <risk severity="medium">Committed routes.geojson might fail a rule (for example a stop over 100 m from its line or a 30 m near-duplicate pair); the fix is data/waypoint work, not threshold changes. Report the findings.</risk>
+    <risk severity="medium">validate.py invoked as a script puts data/ (not repo root) on sys.path, so importing app.config can fail in CI; needs explicit handling and a test that runs it as a subprocess from the repo root.</risk>
+    <risk severity="medium">Seed tests share the Postgres test DB with API tests; leftover route data or table drops could break other tests. Fixtures must isolate and clean up.</risk>
+    <risk severity="low">Doc drift across seven files; the anti-drift grep list may miss phrasing variants.</risk>
+    <risk severity="low">Jurio Foodhouse placeholder pin and unresolved blue direction mean seeded data is knowingly imperfect; documented as known gaps.</risk>
+  </risks>
+
+  <dependencies>
+    <dependency>app/config.py (SERVICE_BBOX, DATABASE_URL), app/db.py (pool), sql/schema.sql, app/queries.py (apply_schema)</dependency>
+    <dependency>data/routes/routes.geojson, data/raw/waypoints.csv, data/snap_routes.py (REGISTRY and dist_m may be imported rather than copied)</dependency>
+    <dependency>tests/conftest.py fixtures (TEST_DATABASE_URL, raw_db, client); Postgres test DB</dependency>
+    <dependency>Python stdlib only; no new packages</dependency>
+  </dependencies>
+
+  <self_critique>
+    Every user story maps to criteria: validate (1-16, 28), seed (17-25), README (26), anti-drift (27). All criteria are observable by exit code, output line, or table contents. Biggest remaining risks: D1 (the seq rule is awkward because the geojson format has no seq, so the optional-seq reading is my interpretation of the request and SPEC) and whether the committed snapshot actually satisfies the rules. Neither is blocking: the D1 default is stated and the data-failure case is reported rather than hidden.
+  </self_critique>
+</spec>

@@ -1,0 +1,65 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="app/__init__.py">empty</file>
+    <file path="app/config.py">Settings dataclass, load_settings(env) with Sec 10 defaults, validation (bbox, GRAPH_MODE, positive numbers), cached get_settings; adds DB_POOL_TIMEOUT_S</file>
+    <file path="app/db.py">psycopg_pool wrapper: make_pool, init_pool (waits, else DatabaseUnavailable), connection() mapping PoolTimeout/OperationalError/InterfaceError to DatabaseUnavailable</file>
+    <file path="app/queries.py">only SQL in app/: apply_schema, ping, insert_report, list_reports (all %s params)</file>
+    <file path="app/schemas.py">ReportCreate (extra=forbid, strip, 1-500, pair + bbox + NUL checks), ReportOut, ErrorResponse, HealthResponse</file>
+    <file path="app/main.py">lifespan (config check, pool, schema, fail-fast SystemExit(1) with log line), 4 exception handlers in one error shape, /health, router include</file>
+    <file path="app/api/__init__.py">empty</file>
+    <file path="app/api/reports.py">thin POST/GET /api/reports; limit Query(10, ge=1, le=50)</file>
+    <file path="app/planner/__init__.py">empty placeholder</file>
+    <file path="sql/schema.sql">Sec 8 tables, IF NOT EXISTS, report created_at DESC index</file>
+    <file path="web/.gitkeep">placeholder so web/ exists</file>
+    <file path="data/__init__.py">empty, for future python -m data.seed</file>
+    <file path="data/validate.py">stub, prints message, exit 0</file>
+    <file path="tests/__init__.py">empty; makes repo root importable so bare `pytest` finds app (alternative was a pytest.ini not in file list)</file>
+    <file path="tests/api/__init__.py">empty (same reason)</file>
+    <file path="tests/conftest.py">TEST_DATABASE_URL (must end _test, db auto-created), session client, per-test TRUNCATE report, raw_db and db_down fixtures</file>
+    <file path="tests/test_config.py">defaults, overrides, invalid values</file>
+    <file path="tests/test_startup.py">subprocess uvicorn with dead DB and bad bbox exits non-zero with clear log line</file>
+    <file path="tests/api/test_schema.py">idempotent apply, 4 tables, rows kept, defaults/index, grep check for SQL outside queries.py</file>
+    <file path="tests/api/test_health.py">up, down, recovery, /docs and openapi paths</file>
+    <file path="tests/api/test_reports.py">201 shape/row match, 20 invalid bodies 422 with no row, malformed JSON, list order/limits, 503 cases, 422-before-503, recovery</file>
+    <file path="tests/api/test_errors.py">404, 405 shape; forced exception gives 500 internal_error with no leak, logged</file>
+    <file path="requirements.txt">fastapi 0.161.1, uvicorn[standard] 0.54.0, pydantic 2.14.1, psycopg[binary,pool] 3.3.6, psycopg-pool 3.3.3, pytest 9.1.1, httpx 0.28.1</file>
+    <file path="Dockerfile">python:3.12.12-slim-bookworm, non-root, uvicorn on 8000</file>
+    <file path="docker-compose.yml">db postgres:16.13-alpine with pg_isready healthcheck; api depends_on service_healthy, restart unless-stopped, healthcheck; API_PORT/POSTGRES_PORT host overrides</file>
+    <file path=".github/workflows/ci.yml">push+PR; postgres service with health options; setup-python 3.12; pip install; pytest; python data/validate.py</file>
+    <file path=".gitignore">.env, caches, venvs, .claude/, .remember/</file>
+    <file path=".dockerignore">excludes git, tests, docs, caches, env</file>
+    <file path=".env.example">Sec 10 variables plus DB_POOL_TIMEOUT_S and TEST_DATABASE_URL, dev-only values</file>
+    <file path="CLAUDE.md">Commands block rewritten to real commands, test DB requirement, seed/bench marked not yet available</file>
+  </files>
+  <tests>
+    <test>pytest: 68 passed (Python 3.14.5 venv, Postgres 16.13 container on port 55432), covers criteria 1-13, 15. Not run on Python 3.12 outside Docker.</test>
+    <test>Live compose stack (API_PORT=18000, POSTGRES_PORT=15432, clean volume): came up healthy with no manual step; /health up; POST 201; limit=0 gives 422 shape; `docker compose stop db` gave /health database down and /api/reports 503; after `start db` /health returned to up without restarting the API. Stack and volume removed afterwards.</test>
+    <test>Manual bad DATABASE_URL run: exits non-zero, log line "Database unreachable at startup, exiting: ..." followed by uvicorn traceback chain (SystemExit raised from lifespan).</test>
+  </tests>
+  <commands_run>
+    <command>python3 -m venv + pip install of the pinned set: ok; versions resolved from PyPI as of today</command>
+    <command>docker run postgres:16.13-alpine (test DB) then pytest -q: 68 passed</command>
+    <command>docker compose up -d --build / ps / curl / stop db / start db / down -v: as described above</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Added DB_POOL_TIMEOUT_S (default 3) env var, also used as startup wait and connect_timeout; rejected a hardcoded constant (CLAUDE.md rule 7). Not in SPEC Sec 10.</decision>
+    <decision>404/405 codes not_found / method_not_allowed; any other HTTP status maps to http_NNN. Not in SPEC Sec 12.</decision>
+    <decision>Message containing NUL is a 422 (Postgres text cannot store it); rejected letting it surface as a 500.</decision>
+    <decision>queries.py functions borrow connections from db.connection() themselves, so routers never touch the pool; rejected passing a connection through the router.</decision>
+    <decision>Fail-fast via SystemExit(1) in the lifespan after an error log; rejected a pre-app check so the same path covers uvicorn and compose restarts. Traceback noise from uvicorn remains.</decision>
+    <decision>DB-down tests swap db._pool for a pool aimed at a dead port; rejected stopping containers.</decision>
+    <decision>Sync (def) routes with a sync pool, run in the threadpool; rejected async psycopg for simplicity.</decision>
+    <decision>Default DATABASE_URL is a localhost dev value so config works with no env; compose and CI set their own. Host ports in compose are overridable because 8000/5432/5433 were occupied by another project on this machine.</decision>
+    <decision>README.md left unchanged: it already has the three Day 1 endpoint rows and the error-code list (without not_found/method_not_allowed).</decision>
+  </design_decisions>
+  <spec_reconciliation_needed>
+    <item>SPEC Sec 12: add not_found (404) and method_not_allowed (405) for unknown path/method.</item>
+    <item>SPEC Sec 10: add DB_POOL_TIMEOUT_S (default 3), seconds to wait for a DB connection and at startup. Also README Configuration table.</item>
+    <item>README quick start: port override env vars API_PORT/POSTGRES_PORT, and the test DB variable TEST_DATABASE_URL, are undocumented there.</item>
+  </spec_reconciliation_needed>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>
+    Not verified: GitHub Actions itself (action major tags v4/v5 chosen from memory, not full pins); Python 3.12 install of the pins outside the Docker build (the Docker image did install them on 3.12 and ran). Starlette TestClient prints a deprecation warning about httpx (suggests httpx2); harmless now but a pin change may be needed later. Criterion 14 "host port 8000" was tested on 18000 because 8000 is in use here. Deliberately failing test in CI was not run; pytest exit code is the mechanism. Criterion 3 log is clear but followed by a traceback.
+  </self_critique>
+</implementation>

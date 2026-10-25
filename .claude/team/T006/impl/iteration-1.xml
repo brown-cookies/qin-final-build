@@ -1,0 +1,37 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="app/planner/graph.py">mark_circular(routes) pure helper (out without back); Graph adds on(last)->on(0) ride edge when route.get("circular") and 2+ stops</file>
+    <file path="app/main.py">load_route_data calls mark_circular before building the Graph</file>
+    <file path="tests/test_trips.py">removed known_gap/xfail on trip 8; world fixture calls mark_circular; added Beeway->Cebuana test (1 ride, 1000-2000 m) and circular-flag registry test</file>
+    <file path="tests/planner/test_planner.py">mk() takes circular=; 9 new wrap tests on a hand-made 1 km square loop (edge/no-edge, under 2 stops, same first/last, across wrap, last->first, needs flag, not used when cheaper, continues past wrap)</file>
+    <file path="SPEC.md">Section 7 (loop closes at the planner) and Section 11 Edges (wrap edge and when it applies)</file>
+    <file path="docs/DECISIONS.md">planner entry, trip 8 entry (xfail text removed, Rejected line rewritten), new wrap edge entry with measured numbers</file>
+    <file path="steps.py (app/planner/steps.py)">NOT changed; tests show it correct across the wrap</file>
+  </files>
+  <tests>
+    <test>Full suite: 226 passed, 1 failed. Failing: tests/test_trips.py::test_trip[8] (Starbucks Near AUF -> Blue End Terminal returns ('blue',), expected ('purple','blue')). Criteria 9 and 10 are NOT met.</test>
+    <test>tests/planner: 21 passed. Trips 1-7, 9, 10 pass. Beeway test passes. data/validate.py ok.</test>
+    <test>Running service: rebuilt api image (code is baked in, not mounted), /health route_data loaded; /api/plan Beeway Travel -> Balibago Cebuana Lhuillier returned 200, walk 137 m to SM Clark End, one Purple ride 1383 m, stops_passed 13.</test>
+  </tests>
+  <commands_run>
+    <command>.venv/Scripts/python.exe -m pytest -q</command>
+    <command>.venv/Scripts/python.exe data/validate.py</command>
+    <command>measurement script in scratchpad (1,500 pairs, random.Random(1))</command>
+    <command>docker compose up -d --build api; curl /health; GET /api/plan</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Shared circular rule is mark_circular in app/planner/graph.py (pure, no imports); rejected a copy in main.py plus the test fixture, and rejected placing it in app/main.py (the test would import the app)</decision>
+    <decision>Wrap edge kept at cost 0 when first and last stop_id are equal, per spec assumption</decision>
+    <decision>Measurement procedure written by me because the engineer's 25-of-1,500 script is not in the repo: 1,500 ordered distinct stop pairs, Random(1); plan distance = walk+transfer+ride metres; reference = same graph with transfer penalty 1e-6 km; count plans over 1.2x reference. Not comparable to the 25 figure.</decision>
+    <decision>Docs record trip 8 as still failing (9 of 10) rather than writing 10 of 10, since 10 of 10 is false. Criterion 16 "no 9 of 10" is therefore not satisfied in DECISIONS.md by design.</decision>
+    <decision>README and docs/ARCHITECTURE.md left unchanged: README has no trip-result line, ARCHITECTURE has no graph description. OPEN_ITEMS unchanged.</decision>
+  </design_decisions>
+  <measured>
+    Hardware: AMD Ryzen 7 5700X, 15.9 GB RAM, Python 3.12.10, Windows 11. Over 20 percent worse than reference: 45 before, 20 after; worst 8.33x before (ARTE Cafe to Balibago 7-Eleven Near Walking Street, 11458 m vs 1376 m), 1.94x after (Power fill Entiero to San Jose Street, 2272 m vs 1169 m). Loop-end gaps measured: Yellow 39 m, Grey 446 m, Purple 705 m (spec said 460/726). Beeway to Cebuana: 1 ride, 1383 m.
+  </measured>
+  <blocked_reason>none, but trip 8 fails (see self_critique)</blocked_reason>
+  <self_critique>
+    Trip 8 cannot pass with the wrap edge at the default costs: Purple from Starbucks Near AUF around to the Blue meeting point is about 9.8 km (plus two boardings at 1.0 km each) against Blue alone at about 2.4 km plus one boarding after a 491 m start walk (not charged). The spec assumed the wrap alone fixes it; it does not, and tuning or a cost change is out of scope. Decision needed from the caller: tune costs, change the trip's accepted list, or restore the xfail. Also the SPEC/DECISIONS wording says 9 of 10. Same-first-and-last test only asserts no crash (weak).
+  </self_critique>
+</implementation>

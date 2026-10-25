@@ -1,0 +1,66 @@
+<spec>
+  <user_stories>
+    - As a rider on a circular route (Yellow, Purple, Grey), I get a plan that stays on the same jeep past the loop's last stop and back to its first stop, instead of a long detour or extra transfers.
+    - As the maintainer, I see all 10 test trips pass (trip 8 no longer an expected failure) and the docs say why.
+    - As a developer, I can unit-test the wrap on a hand-made graph without Postgres, and the planner still imports no DB or config code.
+  </user_stories>
+
+  <acceptance_criteria>
+    1. Wrap edge: for every circular route, Graph adds exactly one extra edge on(route, last_seq) -> on(route, 0) of kind "ride" and cost = straight-line distance in km between the route's last stop and its first stop (the same rule as every other ride edge). Pass: unit test reads graph.adj[on(rid, n-1)] and finds that edge with that cost, kind "ride".
+    2. No wrap on non-circular routes: a route not flagged circular gets no edge from its last node to seq 0; its node edges are identical to today's. Pass: unit test on a graph with a circular and a non-circular route asserts the edge exists on one and not the other (blue/red/darkyellow in the real graph have none).
+    3. Circularity rule and seam: a color is circular when it has an `out` route record and no `back` route record (SPEC Section 7 registry: yellow, purple, grey). It is computed in app/main.py load_route_data (outside planner/) and passed to Graph as plain data on each route dict, a boolean key "circular". A route dict without the key is treated as not circular, so existing planner unit tests and fixtures need no change. A color's `out` record is the only record flagged. No schema change, no seed change, no new config variable, no new data field. Pass: planner/ gains no import of db, queries, config or app.main; real data gives circular True for yellow_out, purple_out, grey_out only and False for the other six records.
+    4. Wrap needs at least 2 stops: a circular-flagged route with fewer than 2 stops gets no wrap edge and does not error.
+    5. First and last stop are the same stop_id: the wrap edge is still added, cost 0.0, and nothing crashes (no division, no self-loop error). A ride across it reports stops_passed counting the first stop as one passed and its distance_m contribution as 0. Pass: unit test on a loop whose last stop_id equals its first.
+    6. steps.py, ride across the wrap: a ride step whose path goes through on(route, last) -> on(route, 0) reports, with no code assuming seq increases: stops_passed = the number of ride edges traversed (the wrap edge counts as 1, so never negative and never seq difference), distance_m = the sum of straight-line segments including the wrap segment, "from" = the boarding stop's name, "to" = the alighting stop's name, color and direction as for any ride ("out"). build_summary text is unchanged in form ("ride Purple to X", or "get off at X" after a transfer). Pass: unit test on a hand-made loop where the best trip boards after the wrap point, e.g. board at stop 3 of 4, alight at stop 1: asserts one ride step, stops_passed = 2 (last stop, first stop... counted as edges: 3->4 not included if boarding at the last; the test states its own hand-computed number), exact from/to names, distance_m equal to the hand-computed sum, and the summary string. Pass also for a ride that boards on the last stop and alights on the first (stops_passed 1).
+    7. Wrap is chosen only when it is the best path: when a trip is cheaper without the wrap (same-direction ride, or a transfer), the path does not use it. Pass: unit test where the non-wrap path is cheaper and the plan has no wrap edge.
+    8. Unit test that needs the wrap: a hand-made graph with one circular route and a trip whose only ride-based answer is to ride past the last stop to the first; without the wrap flag no ride-only path exists (or is longer), with it the plan is the one ride step. Pass: both assertions in one test file under tests/planner/.
+    9. Trip 8 un-marked: tests/test_trips.py removes the xfail (known_gap) mark on trip 8 and the now-unused known_gap helper and its comment. Trip 8 (Starbucks Near AUF to Blue End Terminal) returns ("purple", "blue"). The trips' world fixture must build the graph with the same circular rule as app/main.py (so that fixture passes the flag); the rule is not duplicated in two divergent forms, i.e. one small shared pure function or an equivalent so the test cannot silently disagree with production. Where that function lives is the implementer's call provided planner/ stays free of DB/config imports.
+    10. All 10 trips pass (10 of 10). None of the nine currently passing trips regresses: trips 1-7, 9, 10 still return one of their accepted color sequences, and no accepted list is changed. Pass: pytest tests/test_trips.py shows 10 passed, 0 xfailed.
+    11. Real-data regression: Beeway Travel to Balibago Cebuana Lhuillier (stop names exactly as in routes.geojson, looked up by name like the existing trip tests) plans as exactly 1 ride step (not 3) with total ride distance_m between 1,000 and 2,000 m (about 1.5 km; the pre-fix plan was 11.4 km), using routes.geojson through the same world fixture as test_trips.py. The test sits in tests/test_trips.py or tests/planner/ and is not an xfail.
+    12. Measured, not just tested: run the engineer's 1,500 random stop-pair comparison (or an equivalent stated procedure, with the seed and method written down) before and after the change on the real data, and record in docs/DECISIONS.md the count of pairs whose trip is more than 20% longer than the better plan (was 25 of 1,500) and the worst case, with the hardware stated (CLAUDE.md). The result is reported as measured; if it is not 0 the number is recorded as is and not adjusted.
+    13. Running service check: after `docker compose up`, seed and `docker compose restart api` (route data loads only at startup), GET /api/plan between coordinates at Beeway Travel and Balibago Cebuana Lhuillier returns 200 with one ride step and distance_m within the range of criterion 11; /health shows route_data loaded; the response keys and types are unchanged.
+    14. API shape: no change to the /api/plan response, error codes or schemas. Direction stays "out" for circular rides. Pass: existing API tests pass unmodified.
+    15. Existing tests: all current tests pass except the trip 8 xfail removal; no other existing assertion changes. pytest and data/validate.py are green.
+    16. Docs: (a) SPEC Section 11 planner/graph description (Edges list, around line 325) adds the wrap edge and when it applies; Section 7 (circular route text) states the loop closes at the planner (last stop to first, straight-line); any statement about trip results is updated to 10 of 10. (b) docs/DECISIONS.md: the trip 8 entry changes result to 10 of 10, removes the "Known data and model gap ... xfail" text, and the "Rejected" line is rewritten (it currently rejects adding the wrap edge before measuring: now state that the first run measured the gap at 25 of 1,500 pairs and the edge was added afterward), plus a new short entry for the wrap edge (what, why, rejected alternative, 3 lines) with the measured numbers of criterion 12 and the loop-end distances to the terminals (39 m, 460 m, 726 m). Rejected alternatives to name: a stored or hardcoded circular column or registry list, and treating the loop end as a walk transfer. (c) The planner entry in DECISIONS.md ("a circular route that passes a stop twice needs no special case") stays true; add the wrap in its "What". (d) README trip results line, if one states 9 of 10, and docs/ARCHITECTURE.md graph description get the wrap edge; docs/OPEN_ITEMS.md is updated only if it mentions the gap (it currently does not; no change expected). Pass: grep of the files above shows no remaining "9 of 10", "no wrap-around edge" or "xfail" statement about trip 8.
+    17. Rules: no SQL added, no new package, no new env var, no change to search.py unless unit tests show it is required, no edit to data/ files or routes.geojson.
+  </acceptance_criteria>
+
+  <assumptions>
+    - Circular is derived from the registry rule (out without back), not stored: this is the user's decision and is not reopened. No re-seed is needed; it works on the existing database.
+    - The seam is a boolean "circular" key on each route dict handed to Graph (plain data, default absent = False). Chosen as the minimal change that keeps planner/ import-free and keeps old test fixtures valid. The derivation lives in app/main.py load_route_data (or a small pure helper it calls, also used by the trips test fixture).
+    - Edge cost is the straight-line last-to-first distance in km, kind "ride", with no extra penalty; the 39 m, 460 m and 726 m gaps to the terminals are not modelled as walking.
+    - stops_passed counts ride edges traversed, as today; the wrap edge counts as one, so the first stop is counted as a stop passed. No change to the meaning of the field.
+    - Numbers for criteria 11 and 12 (1.5 km band 1,000-2,000 m; 25 of 1,500; 11.4 km with 3 rides) are the engineer's measurements and are re-checked, not trusted.
+    - Day 3 items (map page, cost tuning, SPEC Section 14 checklist run) are out of scope. Cost values are not tuned.
+    - Same-stop first and last: the edge is kept at cost 0 rather than skipped, so the model stays uniform; the walk guard and Dijkstra tie handling are unaffected.
+  </assumptions>
+
+  <edge_cases>
+    - Boarding at or after the point where the loop meets the destination route (trip 8): the ride must cross the wrap.
+    - Ride that boards at the last stop and alights at the first stop (one edge).
+    - Boarding and alighting at the same stop_id on a loop (the stop appears twice on the route): no ride step is created for a zero-length ride; existing "same stop both ends has no ride" behavior holds, and the wrap edge never lets a rider ride a full lap for nothing (a full lap costs more than staying).
+    - Ride that crosses the wrap and continues past seq 0 several stops: stops_passed and distance_m include all segments after the wrap in order.
+    - A rider could ride around the loop more than once: the lowest-cost path never does, because costs are positive; no cycle guard is added.
+    - A circular route's last stop_id equals its first stop_id (cost 0.0 wrap).
+    - Circular route with one stop, or none: no wrap edge, no error.
+    - A route whose color has only an `out` record outside the registry would be treated as circular; acceptable per the registry rule.
+    - Empty route data at startup: no routes, no wrap edges, behavior as in T005.
+  </edge_cases>
+
+  <risks>
+    <risk severity="medium">The 1,500-pair comparison and the Beeway case are the engineer's numbers; the fix may change other pairs in ways trips 1-10 do not cover. Criterion 12 measures it and any new worse pair is recorded rather than hidden.</risk>
+    <risk severity="low">With a 0-cost or very short wrap (last stop 39 m from the terminal), the planner may prefer riding the loop past the terminal over walking a short distance; that matches real jeeps but changes some plans, so check the 10 trips.</risk>
+    <risk severity="low">Two copies of the circular rule (main.py and the trips test fixture) could drift; criterion 9 requires one shared helper.</risk>
+    <risk severity="low">The running service only picks this up after a restart (route data loads at startup); criterion 13 includes the restart step.</risk>
+  </risks>
+
+  <dependencies>
+    - Files: app/planner/graph.py (wrap edge), app/planner/steps.py (verify and test the wrap ride; change only if a test shows it is wrong), app/main.py (circular derivation), tests/test_trips.py, tests/planner/test_planner.py, SPEC.md (Sections 7 and 11), docs/DECISIONS.md, README.md, docs/ARCHITECTURE.md, docs/OPEN_ITEMS.md (check only).
+    - Data: data/routes/routes.geojson through the existing trips world fixture; read-only.
+    - No new packages or services.
+  </dependencies>
+
+  <self_critique>
+    Stories map to criteria: rider behavior (1, 6, 8, 11, 13), maintainer and trip results (9, 10, 12, 16), developer testability and seam (3, 8, 9, 17). Every criterion has a pass condition. Known roughness: criterion 6 contains a muddled worked example (the implementer must hand-compute stops_passed and distance for their own fixture and assert the exact values; the rule, edges traversed with the wrap as one, is the binding part). Biggest thing that could still be wrong: the Beeway pair's stop names or the 1,000-2,000 m band may not match the data exactly, and steps.py may have an unseen assumption about seq order (the current code indexes ids by seq, which looks safe for the wrap). If the real-data plan comes out as one ride but outside the band, the band is wrong, not the fix; report the measured value.
+  </self_critique>
+</spec>
