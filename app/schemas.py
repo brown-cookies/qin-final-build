@@ -1,6 +1,6 @@
 """Pydantic models, one per request/response."""
 from datetime import datetime
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -50,3 +50,59 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     database: Literal["up", "down"]
+
+
+class WalkStep(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["walk"]
+    from_: str = Field(alias="from")
+    to: str
+    distance_m: int
+
+
+class RideStep(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["ride"]
+    color: str
+    direction: str
+    from_: str = Field(alias="from")
+    to: str
+    stops_passed: int
+    distance_m: int
+
+
+class TransferStep(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["transfer"]
+    from_: str = Field(alias="from")
+    to: str
+    walk_m: int
+    to_color: str
+
+
+class PlanResponse(BaseModel):
+    steps: List[Annotated[Union[WalkStep, RideStep, TransferStep], Field(discriminator="type")]]
+    summary: str
+
+
+class RouteListItem(BaseModel):
+    route_id: str
+    color: str
+    direction: str
+    name: str
+    stop_count: int
+
+
+class RouteDetail(BaseModel):
+    type: Literal["FeatureCollection"]
+    features: List[Dict[str, Any]]
+
+
+class StopOut(BaseModel):
+    stop_id: str
+    name: str
+    lat: float
+    lng: float
