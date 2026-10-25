@@ -65,12 +65,10 @@ def build_summary(steps):
     parts = [f"Walk to {steps[0]['to']}"]
     for i, s in enumerate(steps[1:-1], start=1):
         if s["type"] == "ride":
-            after_transfer = steps[i - 1]["type"] == "transfer"
-            nxt = steps[i + 1]["type"]
-            if not after_transfer:
+            if steps[i - 1]["type"] == "transfer":
+                parts.append(f"get off at {s['to']}")  # the transfer part already named the color
+            else:
                 parts.append(f"ride {color_label(s['color'])} to {s['to']}")
-            elif nxt != "transfer":
-                parts.append(f"get off at {s['to']}")
         elif s["type"] == "transfer":
             parts.append(f"transfer to {color_label(s['to_color'])}")
     parts.append("walk to your destination")
