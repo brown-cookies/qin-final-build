@@ -13,7 +13,7 @@ Tracks the open items from `SPEC.md` Section 15. Status: `open`, `answered`, `de
 
 ## Item 5: assumed decisions (confirmed)
 
-1. Each color is exactly one named route run in two directions (12 records). Variants, if found later, get their own `route_id` and a registry entry.
+1. Each color is exactly one named route. Yellow, Purple and Grey are one-way circular (`out` only); Blue, Red and Dark yellow run in two directions (9 records). Variants, if found later, get their own `route_id` and a registry entry.
 2. The map page is in scope.
 3. English only.
 4. Reports are public immediately. Known risk: no moderation; the maintainer edits `status` in SQL. Record in `DECISIONS.md`.

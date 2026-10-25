@@ -4,7 +4,7 @@ Plain-language jeepney directions for Angeles City. Pick where you are and where
 
 > Walk to Dau Terminal, ride Yellow to Balibago Plaza, transfer to Red, get off at SM Clark, walk to your destination.
 
-Working name. Covers the six color-coded routes, each run in two directions (12 route records): Yellow, Blue, Purple, Grey, Red and Dark Yellow. See [SPEC.md](SPEC.md) for the full specification.
+Working name. Covers the six color-coded routes, where Yellow, Purple and Grey are one-way circular routes and Blue, Red and Dark Yellow run in two directions (9 route records): Yellow, Blue, Purple, Grey, Red and Dark Yellow. See [SPEC.md](SPEC.md) for the full specification.
 
 > **Status:** MVP in progress (3-day sprint). Sections marked _TODO_ are filled in as the pieces land. See [roadmap.md](docs/roadmap.md).
 
@@ -55,7 +55,7 @@ Base path `/api`, except `/health`. Errors always have the shape `{"error": "<co
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/plan?from_lat=&from_lng=&to_lat=&to_lng=` | Plan a trip; returns ordered steps and a one-line `summary` |
-| `GET` | `/api/routes` | List the 12 route records |
+| `GET` | `/api/routes` | List the 9 route records |
 | `GET` | `/api/routes/{route_id}` | Route line and ordered stops as GeoJSON |
 | `GET` | `/api/stops?q=` | Stop-name search (case-insensitive, up to 10) |
 | `POST` | `/api/reports` | Submit a route problem report (validated, stored in PostgreSQL) |
@@ -93,7 +93,7 @@ FastAPI serves a JSON API and a static Leaflet map page. A pure-Python planner (
 
 ## Route data
 
-Route data is created offline and committed as `data/routes/routes.geojson`. All 12 routes are hand-traced waypoints, snapped to roads with OSRM (offline script). Provenance per route, the snap date and known gaps will be in `data/README.md` (planned, not written yet).
+Route data is created offline and committed as `data/routes/routes.geojson`. All 9 routes are hand-traced waypoints, snapped to roads with OSRM (offline script). Provenance per route, the snap date and known gaps will be in `data/README.md` (planned, not written yet).
 
 Re-seeding is safe and never touches reports.
 

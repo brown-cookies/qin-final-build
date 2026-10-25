@@ -1,0 +1,464 @@
+route_id,seq,name,lat,lng,is_stop
+yellow_out,1,Yellow Terminal,15.1231986,120.5996147,1
+yellow_out,2,,15.1229894,120.599476,0
+yellow_out,3,Chevalier School,15.1236791,120.5989952,1
+yellow_out,4,San Pedro Street,15.1249151,120.5983233,1
+yellow_out,5,Sacred Heart Hospital,15.1252814,120.5981761,1
+yellow_out,6,Jollibee San Jacinto Street,15.125657,120.5980815,1
+yellow_out,7,Rotonda Circle near Jollibee San Jacinto,15.1258533,120.5979917,1
+yellow_out,8,Rotonda Circle near Santo Rosario Street,15.125858,120.597755,1
+yellow_out,9,Brake and Clutch Bonding Shop,15.1260263,120.5975559,1
+yellow_out,10,Caltex near Super 8,15.126597,120.5971737,1
+yellow_out,11,Super 8,15.1270069,120.5969341,1
+yellow_out,12,Korean Hanaro Mart,15.1276446,120.5965578,1
+yellow_out,13,Hungry Neighbors,15.1279586,120.596362,1
+yellow_out,14,J&T Express,15.1286675,120.5959608,1
+yellow_out,15,Dominican Children's Clinic,15.1294236,120.5955089,1
+yellow_out,16,San Jose Street,15.1301179,120.595074,1
+yellow_out,17,Dadad's Peri Peri Chicken,15.1307243,120.5945893,1
+yellow_out,18,M Lhuillier,15.1311091,120.5942259,1
+yellow_out,19,San Jose Chapel,15.1314741,120.5938634,1
+yellow_out,20,Eggs N' Brekky,15.1320757,120.5932952,1
+yellow_out,21,Kickz & Cutz Barbershop,15.1328272,120.5925711,1
+yellow_out,22,Bale Herencia,15.1333142,120.5920887,1
+yellow_out,23,7-Eleven HAU,15.1335559,120.5918528,1
+yellow_out,24,TNC,15.1338754,120.5920996,1
+yellow_out,25,Makimura,15.1345551,120.5925722,1
+yellow_out,26,Grill Mentality,15.1349944,120.5928944,1
+yellow_out,27,7-Eleven near Grill Mentality,15.1359002,120.5915768,1
+yellow_out,28,PLDT Sales and Services,15.1368494,120.5902707,1
+yellow_out,29,BPI-BPO near Puregold,15.1375495,120.5892952,1
+yellow_out,30,Puregold,15.1383778,120.5881579,1
+yellow_out,31,Palengke Rotonda near Jollibee,15.1387397,120.5875507,1
+yellow_out,32,Im Lucky Mart,15.1379576,120.5870625,1
+yellow_out,33,Mac O Bon Snack House,15.137023,120.5865522,1
+yellow_out,34,Landbank,15.1363997,120.5876084,1
+yellow_out,35,Jenra Mall,15.136107,120.5882351,1
+yellow_out,36,Nepo Mall Entrance,15.135582,120.5892873,1
+yellow_out,37,Uncle John's,15.1348104,120.5905549,1
+yellow_out,38,HAU Main Gate,15.134112,120.591292,1
+yellow_out,39,7-Eleven HAU,15.1335373,120.5918376,1
+yellow_out,40,Bale Herencia,15.1332949,120.5920753,1
+yellow_out,41,Kickz & Cutz Barbershop,15.1328037,120.5925492,1
+yellow_out,42,Eggs N' Brekky,15.1320621,120.5932745,1
+yellow_out,43,San Jose Chapel,15.1314606,120.5938498,1
+yellow_out,44,M Lhuillier,15.1310917,120.5942134,1
+yellow_out,45,Dadad's Peri Peri Chicken,15.13071,120.5945717,1
+yellow_out,46,San Jose Street,15.130115,120.5950532,1
+yellow_out,47,Dominican Children's Clinic,15.1294135,120.5954863,1
+yellow_out,48,J&T Express,15.1286554,120.5959392,1
+yellow_out,49,Hungry Neighbors,15.1279468,120.596343,1
+yellow_out,50,Korean Hanaro Mart,15.1276321,120.5965416,1
+yellow_out,51,Super 8,15.1269954,120.5969161,1
+yellow_out,52,Caltex near Super 8,15.1265842,120.5971537,1
+yellow_out,53,Brake and Clutch Bonding Shop,15.1259963,120.5974736,1
+yellow_out,54,301 Street,15.1243981,120.5984441,1
+yellow_out,55,Don Serafin,15.1220913,120.600043,1
+yellow_out,56,SM Telabastagan,15.1214857,120.6005123,1
+yellow_out,57,,15.1215416,120.6005793,0
+yellow_out,58,Petron End Stop,15.1228493,120.599579,1
+purple_out,1,Purple Terminal,15.1691424,120.5868032,1
+purple_out,2,Bamban PUJ Terminal,15.1693703,120.5875499,1
+purple_out,3,Game Countdown Park,15.1689965,120.5880805,1
+purple_out,4,Balibago Police Assistance Desk,15.1683026,120.5895526,1
+purple_out,5,Balibago KFC,15.1680222,120.5896305,1
+purple_out,6,Balibago 7-Eleven Near Walking Street,15.1675407,120.5897564,1
+purple_out,7,Fields Avenue,15.1673042,120.5898143,1
+purple_out,8,PSBank,15.1670624,120.5898783,1
+purple_out,9,Icare Wellness,15.166733,120.5899612,1
+purple_out,10,Manson Drug Store,15.1664269,120.5900458,1
+purple_out,11,The Court Yard,15.1659521,120.5901677,1
+purple_out,12,Balibago MayBank,15.1656856,120.5902354,1
+purple_out,13,Balibago Cebuana Lhuillier,15.1653363,120.5903187,1
+purple_out,14,Balibago PC Logic,15.1651155,120.5903706,1
+purple_out,15,Dabshop,15.1649401,120.5904136,1
+purple_out,16,Alanax Enterprise,15.1648007,120.5904527,1
+purple_out,17,Balibago Egg and Brecky,15.1646756,120.5904965,1
+purple_out,18,Northern Dental Specialist,15.1644494,120.5905594,1
+purple_out,19,Balibago Starbucks,15.1642582,120.5906318,1
+purple_out,20,PAGCOR,15.1639302,120.5907133,1
+purple_out,21,Gerry's Grill,15.1635403,120.5908224,1
+purple_out,22,Shanghai Palace Restaurant,15.1632145,120.5908964,1
+purple_out,23,Saver's Mall,15.1626165,120.5910488,1
+purple_out,24,Balibago Southstar Drug,15.1622818,120.5911299,1
+purple_out,25,19 Copung Copung Grill,15.1618192,120.5912445,1
+purple_out,26,Big Toshio Petshop and Trading,15.1615936,120.5913086,1
+purple_out,27,Nomi Balibago,15.1612818,120.5913857,1
+purple_out,28,Max Restaurant,15.1609811,120.5914759,1
+purple_out,29,Puregold near Max Restaurant,15.1605954,120.591557,1
+purple_out,30,Uncle John Balibago,15.1603033,120.5916367,1
+purple_out,31,Cielo Beauty Bar,15.1600647,120.5916833,1
+purple_out,32,Domino,15.1596263,120.5918238,1
+purple_out,33,Manson Drug,15.1594107,120.591879,1
+purple_out,34,Angry Pig,15.1590754,120.5919674,1
+purple_out,35,Comglassco Autoglass,15.1583862,120.5921239,1
+purple_out,36,System Plus College,15.1577384,120.592263,1
+purple_out,37,Uncle John Near Robinson Angeles,15.1570658,120.5922839,1
+purple_out,38,Abacan Bridge,15.154885,120.5921044,1
+purple_out,39,Angeles Crossing Rotonda,15.1528237,120.5919609,1
+purple_out,40,Pc Worx,15.1524948,120.5917384,1
+purple_out,41,Yamaha Shop,15.1520984,120.5915494,1
+purple_out,42,Aero Metal Force Trading,15.1517935,120.5914246,1
+purple_out,43,Better Living Tile and Bath Center,15.1512434,120.5911916,1
+purple_out,44,Ronnie Battery Center Near Osave,15.1486331,120.5899866,1
+purple_out,45,Triple Five Auto Supply,15.1474848,120.5894892,1
+purple_out,46,Metro Motorbikes,15.1473001,120.5893871,1
+purple_out,47,Racquel Auto Supply,15.1463818,120.5890755,1
+purple_out,48,Tail G E-Bike,15.145921,120.5889102,1
+purple_out,49,GDS Building,15.1450786,120.5887291,1
+purple_out,50,SOP Trading,15.1440048,120.588439,1
+purple_out,51,Bike Attack,15.1435128,120.5883559,1
+purple_out,52,LBC,15.142295,120.5880776,1
+purple_out,53,DAR Electronic Shop,15.1418765,120.5879571,1
+purple_out,54,Angeles Sapangbato Terminal,15.1417173,120.5879174,1
+purple_out,55,Addessa,15.1413267,120.587808,1
+purple_out,56,Diamond Home Plaza,15.1405287,120.5876434,1
+purple_out,57,Dainty China House,15.1396779,120.5875062,1
+purple_out,58,Lorraine Technical School,15.1391304,120.5874314,1
+purple_out,59,167 Shopping Center,15.138458,120.5873292,1
+purple_out,60,Im Lucky Mart,15.1379065,120.5869813,1
+purple_out,61,Mac O Bon Snack House,15.1369883,120.586505,1
+purple_out,62,Motortrade,15.1367079,120.5870603,1
+purple_out,63,Landbank,15.1364203,120.5876491,1
+purple_out,64,Jenra Mall,15.1361886,120.588087,1
+purple_out,65,Veloca Tower Center,15.1358435,120.5888372,1
+purple_out,66,Nepo Mall Entrance,15.1356004,120.589233,1
+purple_out,67,Uncle John's,15.1348097,120.5905704,1
+purple_out,68,HAU Main Gate,15.1342353,120.5911862,1
+purple_out,69,Southstar Drugstore near HAU,15.1336185,120.5918097,1
+purple_out,70,Grill Mentality,15.13495,120.5928259,1
+purple_out,71,Rural Bank of Angeles City,15.135936,120.5915438,1
+purple_out,72,88Mart Korean Grocery,15.1365512,120.5919664,1
+purple_out,73,Savewise Supermarket,15.1370611,120.5923063,1
+purple_out,74,Kabsarap,15.1395144,120.5941748,1
+purple_out,75,Holy Family Center,15.1398379,120.5943962,1
+purple_out,76,Accumend Diagnostics Center,15.1412577,120.5954527,1
+purple_out,77,Mcdo near McArthur Highway,15.142698,120.5965109,1
+purple_out,78,Angeles University Foundation (AUF),15.145108,120.5953955,1
+purple_out,79,Watson's near AUF,15.1470183,120.59442,1
+purple_out,80,Starbucks Near AUF,15.1472034,120.5943069,1
+purple_out,81,Veranda,15.1487141,120.5935103,1
+purple_out,82,Clinica Henson,15.1511104,120.5925744,1
+purple_out,83,Shell,15.1519043,120.5923268,1
+purple_out,84,Angeles Crossing Rotonda,15.1529127,120.5921351,1
+purple_out,85,Abacan Bridge,15.1548604,120.5921932,1
+purple_out,86,Uncle John Near Robinson Angeles,15.1570572,120.5923582,1
+purple_out,87,System Plus College,15.1577547,120.5923316,1
+purple_out,88,Comglassco Autoglass,15.1584067,120.5921835,1
+purple_out,89,Angry Pig,15.1590828,120.5920096,1
+purple_out,90,Manson Drug,15.1594242,120.5919376,1
+purple_out,91,Domino,15.1596372,120.5918707,1
+purple_out,92,Cielo Beauty Bar,15.1600513,120.5917188,1
+purple_out,93,Uncle John Balibago,15.1603061,120.5916684,1
+purple_out,94,Puregold near Max Restaurant,15.1606001,120.5916135,1
+purple_out,95,Max Restaurant,15.1609932,120.5915232,1
+purple_out,96,Nomi Balibago,15.1612765,120.591418,1
+purple_out,97,Big Toshio Petshop and Trading,15.1616038,120.5913517,1
+purple_out,98,19 Copung Copung Grill,15.1618102,120.591294,1
+purple_out,99,Balibago Southstar Drug,15.1622759,120.5911602,1
+purple_out,100,Saver's Mall,15.1626238,120.591086,1
+purple_out,101,Shanghai Palace Restaurant,15.163226,120.5909389,1
+purple_out,102,Gerry's Grill,15.1635363,120.5908546,1
+purple_out,103,PAGCOR,15.1639362,120.590743,1
+purple_out,104,Balibago Starbucks,15.1642773,120.5906655,1
+purple_out,105,Northern Dental Specialist,15.1644677,120.5905838,1
+purple_out,106,Balibago Egg and Brecky,15.1646754,120.5905306,1
+purple_out,107,Alanax Enterprise,15.1647968,120.5904842,1
+purple_out,108,Dabshop,15.164959,120.5904423,1
+purple_out,109,Balibago PC Logic,15.1651284,120.5903933,1
+purple_out,110,Balibago Cebuana Lhuillier,15.1653467,120.5903461,1
+purple_out,111,Balibago MayBank,15.1656906,120.5902659,1
+purple_out,112,The Court Yard,15.1659535,120.5902031,1
+purple_out,113,Manson Drug Store,15.1664171,120.5900867,1
+purple_out,114,Icare Wellness,15.1667261,120.589998,1
+purple_out,115,PSBank,15.1670562,120.58991,1
+purple_out,116,Fields Avenue,15.1673076,120.589856,1
+purple_out,117,Balibago 7-Eleven Near Walking Street,15.1675422,120.5897993,1
+purple_out,118,Balibago KFC,15.1680201,120.5896762,1
+purple_out,119,Balibago Police Assistance Desk,15.1683089,120.5895984,1
+purple_out,120,Game Countdown Park,15.1690324,120.5880937,1
+purple_out,121,Bamban PUJ Terminal,15.1693984,120.5875575,1
+purple_out,122,Purple Terminal,15.1691596,120.5867935,1
+purple_out,123,SM Clark End,15.1669903,120.5806237,1
+grey_out,1,Grey Terminal,15.1680918,120.5846228,1
+grey_out,2,Bayanihan Park,15.168946,120.5863298,1
+grey_out,3,Jocson College,15.1692185,120.5871437,1
+grey_out,4,Game Countdown Park,15.1689224,120.5880674,1
+grey_out,5,Balibago Police Assistance Desk,15.1684632,120.5894548,1
+grey_out,6,Balibago KFC,15.1681801,120.5895115,1
+grey_out,7,Balibago 7-Eleven Near Walking Street,15.1676409,120.5896679,1
+grey_out,8,Fields Avenue,15.167355,120.5897297,1
+grey_out,9,Walking Street,15.1671099,120.589761,1
+grey_out,10,Balibago Fresh Options,15.1666593,120.5899035,1
+grey_out,11,Manson Drug Store,15.1664183,120.5899916,1
+grey_out,12,The Court Yard,15.1659488,120.5900854,1
+grey_out,13,Balibago PC Logic,15.1650473,120.5902985,1
+grey_out,14,Northern Dental Specialist,15.1645527,120.5904333,1
+grey_out,15,PAGCOR,15.1639497,120.5905894,1
+grey_out,16,Gerry's Grill,15.1634544,120.5906907,1
+grey_out,17,Security Bank,15.1631667,120.5907719,1
+grey_out,18,Shanghai Palace Restaurant,15.1630187,120.5908101,1
+grey_out,19,Yellow Cab Pizza,15.1624956,120.5909192,1
+grey_out,20,Balibago Southstar Drug,15.162221,120.5909764,1
+grey_out,21,EMC Dental Clinic,15.1615064,120.591231,1
+grey_out,22,Max Restaurant,15.1609351,120.5913877,1
+grey_out,23,Puregold near Max Restaurant,15.1605079,120.5914904,1
+grey_out,24,Cielo Beauty Bar,15.1599761,120.5916693,1
+grey_out,25,Angry Pig,15.1589675,120.5919141,1
+grey_out,26,System Plus College,15.1579212,120.5921277,1
+grey_out,27,Robinson Mall,15.1572127,120.5922326,1
+grey_out,28,Abacan Bridge,15.1548486,120.5920466,1
+grey_out,29,Nher Electrical Shop,15.1531244,120.5919019,1
+grey_out,30,Pc Worx,15.1526361,120.5917378,1
+grey_out,31,Aero Metal Force Trading,15.1518763,120.5914184,1
+grey_out,32,Better Living Tile and Bath Center,15.1507218,120.5908591,1
+grey_out,33,NCR Construction Supply,15.1496919,120.5904047,1
+grey_out,34,Osave,15.1486064,120.5898973,1
+grey_out,35,Triple Five Auto Supply,15.1472914,120.5893241,1
+grey_out,36,Racquel Auto Supply,15.1462856,120.5889905,1
+grey_out,37,Tail G E-Bike,15.1459363,120.5888733,1
+grey_out,38,GDS Building,15.1451831,120.5886536,1
+grey_out,39,SOP Trading,15.1439138,120.5883984,1
+grey_out,40,Alfamart,15.1433416,120.5882692,1
+grey_out,41,Saver's Appliance,15.142167,120.5879851,1
+grey_out,42,Addessa,15.14132,120.5877462,1
+grey_out,43,Diamond Home Plaza,15.1405391,120.5876112,1
+grey_out,44,McDonald Near Sapangbato Terminal,15.1403312,120.5875736,1
+grey_out,45,Lorraine Technical School,15.1391462,120.587372,1
+grey_out,46,167 Shopping Center,15.1384184,120.5872421,1
+grey_out,47,Keni Kitchen,15.1370464,120.5864997,1
+grey_out,48,Landbank,15.1363853,120.5875531,1
+grey_out,49,,15.1367053,120.5879115,0
+grey_out,50,268 Shopper Mart,15.1369681,120.5880407,1
+grey_out,51,Nelson Balloon,15.1373267,120.5883001,1
+grey_out,52,Ocampo's Appliances,15.1378357,120.5887043,1
+grey_out,53,Villarica,15.1383165,120.5881397,1
+grey_out,54,Young Bookstore,15.138658,120.5876674,1
+grey_out,55,Jollibee Rizal Street,15.1391433,120.5874636,1
+grey_out,56,McDonald Near Sapangbato Terminal,15.1403143,120.5876389,1
+grey_out,57,Diamond Home Plaza,15.1405291,120.5876587,1
+grey_out,58,Addessa,15.1413035,120.5878615,1
+grey_out,59,Saver's Appliance,15.1421707,120.5880894,1
+grey_out,60,Alfamart,15.143333,120.588349,1
+grey_out,61,SOP Trading,15.1438968,120.5884801,1
+grey_out,62,GDS Building,15.1451632,120.5887759,1
+grey_out,63,Tail G E-Bike,15.1458854,120.5889567,1
+grey_out,64,Racquel Auto Supply,15.1462551,120.5890623,1
+grey_out,65,Triple Five Auto Supply,15.147239,120.5894476,1
+grey_out,66,Osave,15.1485603,120.5900113,1
+grey_out,67,NCR Construction Supply,15.1496362,120.5905595,1
+grey_out,68,Better Living Tile and Bath Center,15.1506458,120.5909955,1
+grey_out,69,Aero Metal Force Trading,15.1518154,120.5915387,1
+grey_out,70,Pc Worx,15.1526201,120.5919037,1
+grey_out,71,Nher Electrical Shop,15.1531452,120.5920681,1
+grey_out,72,Abacan Bridge,15.1548603,120.5921791,1
+grey_out,73,Robinson Mall,15.157227,120.5923769,1
+grey_out,74,System Plus College,15.1579721,120.592276,1
+grey_out,75,Angry Pig,15.1589971,120.5920365,1
+grey_out,76,Cielo Beauty Bar,15.1599991,120.5917721,1
+grey_out,77,Puregold near Max Restaurant,15.160556,120.5916271,1
+grey_out,78,Max Restaurant,15.1609733,120.5915176,1
+grey_out,79,EMC Dental Clinic,15.1615489,120.591374,1
+grey_out,80,Balibago Southstar Drug,15.1622781,120.5911857,1
+grey_out,81,Yellow Cab Pizza,15.1625414,120.5911349,1
+grey_out,82,Shanghai Palace Restaurant,15.1630596,120.5909814,1
+grey_out,83,Gerry's Grill,15.1635044,120.5908537,1
+grey_out,84,PAGCOR,15.1639771,120.5907859,1
+grey_out,85,Northern Dental Specialist,15.1645897,120.59062,1
+grey_out,86,Balibago PC Logic,15.1650947,120.5904352,1
+grey_out,87,The Court Yard,15.1659722,120.5902231,1
+grey_out,88,Manson Drug Store,15.1664575,120.59008,1
+grey_out,89,Balibago Fresh Options,15.1666855,120.5900086,1
+grey_out,90,Walking Street,15.1671561,120.5898496,1
+grey_out,91,Fields Avenue,15.1673784,120.5898119,1
+grey_out,92,Balibago 7-Eleven Near Walking Street,15.1676446,120.5897337,1
+grey_out,93,Balibago KFC,15.1682146,120.589605,1
+grey_out,94,Balibago Police Assistance Desk,15.1684932,120.5895616,1
+grey_out,95,Game Countdown Park,15.1689456,120.5880992,1
+grey_out,96,Jocson College,15.169269,120.587143,1
+grey_out,97,Bayanihan Park,15.168986,120.5863058,1
+grey_out,98,SM Clark End,15.1669903,120.5806237,1
+blue_out,1,Blue Terminal,15.1379247,120.5889566,1
+blue_out,2,Plaridel Shopping,15.138288,120.5893593,1
+blue_out,3,Republic Central College,15.1392529,120.590307,1
+blue_out,4,Kuliat Street,15.1406312,120.5917376,1
+blue_out,5,North-South Commuter Railway,15.1388807,120.5936704,1
+blue_out,6,Power fill Entiero,15.1391777,120.5939669,1
+blue_out,7,OT7 Purple Cafe,15.1393495,120.5941119,1
+blue_out,8,Holy Family Center,15.1397653,120.5944138,1
+blue_out,9,Accumend Diagnostics Center,15.1412415,120.5954727,1
+blue_out,10,David Auto Supply,15.1422546,120.5963246,1
+blue_out,11,Bharatvir Indian Grocery,15.1431423,120.5969774,1
+blue_out,12,Central Assembly of God,15.1437904,120.5974367,1
+blue_out,13,Hard court Badminton Center,15.144531,120.5979528,1
+blue_out,14,RNR Paint Center,15.1455711,120.5987831,1
+blue_out,15,3K's Crispy Pata,15.1472051,120.6002043,1
+blue_out,16,CML Auto Supply,15.1481501,120.6010236,1
+blue_out,17,GS25 Korean Mart,15.1490628,120.6017468,1
+blue_out,18,Grand Fame Aluminum and Glass,15.1500315,120.602537,1
+blue_out,19,Ninia Auto Electrical Shop,15.1506868,120.6030818,1
+blue_out,20,Jose P Dizon Elementary School,15.1519846,120.6039545,1
+blue_out,21,RS3 Betis Furniture,15.1524917,120.6042204,1
+blue_out,22,Jollibee Pandan,15.1534383,120.6046913,1
+blue_out,23,J&T Express Pandan,15.1544696,120.6052005,1
+blue_out,24,McDonalds Pandan,15.1547644,120.6053861,1
+blue_out,25,Marquee Doctor Medical Center,15.1595586,120.6078831,1
+blue_out,26,Project Arsenal Offroad,15.1601114,120.608233,1
+blue_out,27,Marquee Mall,15.1623831,120.6086949,1
+blue_out,28,Blue End Terminal,15.1621338,120.6079997,1
+blue_back,1,Blue End Terminal,15.1621338,120.6079997,1
+blue_back,2,Marquee Mall,15.1623831,120.6086949,1
+blue_back,3,Project Arsenal Offroad,15.1601114,120.608233,1
+blue_back,4,Marquee Doctor Medical Center,15.1595586,120.6078831,1
+blue_back,5,McDonalds Pandan,15.1547644,120.6053861,1
+blue_back,6,J&T Express Pandan,15.1544696,120.6052005,1
+blue_back,7,Jollibee Pandan,15.1534383,120.6046913,1
+blue_back,8,RS3 Betis Furniture,15.1524917,120.6042204,1
+blue_back,9,Jose P Dizon Elementary School,15.1519846,120.6039545,1
+blue_back,10,Ninia Auto Electrical Shop,15.1506868,120.6030818,1
+blue_back,11,Grand Fame Aluminum and Glass,15.1500315,120.602537,1
+blue_back,12,GS25 Korean Mart,15.1490628,120.6017468,1
+blue_back,13,CML Auto Supply,15.1481501,120.6010236,1
+blue_back,14,3K's Crispy Pata,15.1472051,120.6002043,1
+blue_back,15,RNR Paint Center,15.1455711,120.5987831,1
+blue_back,16,Hard court Badminton Center,15.144531,120.5979528,1
+blue_back,17,Central Assembly of God,15.1437904,120.5974367,1
+blue_back,18,Bharatvir Indian Grocery,15.1431423,120.5969774,1
+blue_back,19,David Auto Supply,15.1422546,120.5963246,1
+blue_back,20,Accumend Diagnostics Center,15.1412415,120.5954727,1
+blue_back,21,Holy Family Center,15.1397653,120.5944138,1
+blue_back,22,OT7 Purple Cafe,15.1393495,120.5941119,1
+blue_back,23,Power fill Entiero,15.1391777,120.5939669,1
+blue_back,24,North-South Commuter Railway,15.1388807,120.5936704,1
+blue_back,25,Kuliat Street,15.1406312,120.5917376,1
+blue_back,26,Republic Central College,15.1392529,120.590307,1
+blue_back,27,Plaridel Shopping,15.138288,120.5893593,1
+blue_back,28,Blue Terminal,15.1379247,120.5889566,1
+darkyellow_out,1,Dark Yellow Terminal,15.1663974,120.5828311,1
+darkyellow_out,2,Sussie Cuisine,15.1661468,120.5814542,1
+darkyellow_out,3,Sunshine Laundry,15.1659514,120.5804687,1
+darkyellow_out,4,Beeway Travel,15.1658611,120.5801039,1
+darkyellow_out,5,Guangzhou Restaurant,15.165721,120.5792713,1
+darkyellow_out,6,ARTE Cafe,15.1656159,120.5784921,1
+darkyellow_out,7,"Local Clarkview, Iglesia ni Cristo",15.1653468,120.5768897,1
+darkyellow_out,8,Hensonville Petron,15.1652657,120.5762022,1
+darkyellow_out,9,Moonlight Bar,15.1654168,120.5744547,1
+darkyellow_out,10,Garfield's Last Stand,15.1655219,120.5738035,1
+darkyellow_out,11,Sorriso Eatery,15.1657339,120.5725468,1
+darkyellow_out,12,Bretto's Deli & Meatshop,15.1659163,120.5714601,1
+darkyellow_out,13,Magz Restaurant,15.1661302,120.5700564,1
+darkyellow_out,14,Savannah Resort Hotel,15.1662113,120.5695943,1
+darkyellow_out,15,Steak Experience,15.1663827,120.5684197,1
+darkyellow_out,16,The Royal British,15.1667612,120.5655669,1
+darkyellow_out,17,A HUA Dimsum,15.1666654,120.5650227,1
+darkyellow_out,18,Mirror's Club,15.1665548,120.563724,1
+darkyellow_out,19,R&B Club,15.1664461,120.5627239,1
+darkyellow_out,20,AAA VIP Rent a Car,15.1663908,120.5623782,1
+darkyellow_out,21,Jiyoon Auto Vehicle Trading,15.1663133,120.561727,1
+darkyellow_out,22,Sum na Ra Korean Restaurant,15.1656608,120.5598382,1
+darkyellow_out,23,Mikel Mar's Minimart,15.165106,120.5586885,1
+darkyellow_out,24,Jeju Donga Restaurant,15.1648479,120.5581785,1
+darkyellow_out,25,JMI Motors & Car Wash,15.1645028,120.5574946,1
+darkyellow_out,26,Apple Massage,15.1641231,120.556744,1
+darkyellow_out,27,Chosun Chicken,15.1640091,120.5565034,1
+darkyellow_out,28,Club Pentagon,15.163817,120.5561463,1
+darkyellow_out,29,Puregold Don Juico Avenue,15.1634382,120.5554135,1
+darkyellow_out,30,Red Terminal,15.163142,120.5547793,1
+darkyellow_back,1,Red Terminal,15.163142,120.5547793,1
+darkyellow_back,2,Puregold Don Juico Avenue,15.1634382,120.5554135,1
+darkyellow_back,3,Club Pentagon,15.163817,120.5561463,1
+darkyellow_back,4,Chosun Chicken,15.1640091,120.5565034,1
+darkyellow_back,5,Apple Massage,15.1641231,120.556744,1
+darkyellow_back,6,JMI Motors & Car Wash,15.1645028,120.5574946,1
+darkyellow_back,7,Jeju Donga Restaurant,15.1648479,120.5581785,1
+darkyellow_back,8,Mikel Mar's Minimart,15.165106,120.5586885,1
+darkyellow_back,9,Sum na Ra Korean Restaurant,15.1656608,120.5598382,1
+darkyellow_back,10,Jiyoon Auto Vehicle Trading,15.1663133,120.561727,1
+darkyellow_back,11,AAA VIP Rent a Car,15.1663908,120.5623782,1
+darkyellow_back,12,R&B Club,15.1664461,120.5627239,1
+darkyellow_back,13,Mirror's Club,15.1665548,120.563724,1
+darkyellow_back,14,A HUA Dimsum,15.1666654,120.5650227,1
+darkyellow_back,15,The Royal British,15.1667612,120.5655669,1
+darkyellow_back,16,Steak Experience,15.1663827,120.5684197,1
+darkyellow_back,17,Savannah Resort Hotel,15.1662113,120.5695943,1
+darkyellow_back,18,Magz Restaurant,15.1661302,120.5700564,1
+darkyellow_back,19,Bretto's Deli & Meatshop,15.1659163,120.5714601,1
+darkyellow_back,20,Sorriso Eatery,15.1657339,120.5725468,1
+darkyellow_back,21,Garfield's Last Stand,15.1655219,120.5738035,1
+darkyellow_back,22,Moonlight Bar,15.1654168,120.5744547,1
+darkyellow_back,23,Hensonville Petron,15.1652657,120.5762022,1
+darkyellow_back,24,"Local Clarkview, Iglesia ni Cristo",15.1653468,120.5768897,1
+darkyellow_back,25,ARTE Cafe,15.1656159,120.5784921,1
+darkyellow_back,26,Guangzhou Restaurant,15.165721,120.5792713,1
+darkyellow_back,27,Beeway Travel,15.1658611,120.5801039,1
+darkyellow_back,28,Sunshine Laundry,15.1659514,120.5804687,1
+darkyellow_back,29,Sussie Cuisine,15.1661468,120.5814542,1
+darkyellow_back,30,Dark Yellow Terminal,15.1663974,120.5828311,1
+red_out,1,Red Terminal,15.1629156,120.5547028,1
+red_out,2,Han Gang Korean BBQ,15.1625009,120.5549186,1
+red_out,3,Jinbae Jokbal,15.1620666,120.5551396,1
+red_out,4,Beer Carnival,15.1617786,120.5553019,1
+red_out,5,Jung's Kitchen,15.1614098,120.5555062,1
+red_out,6,Park's Bread and Cafe,15.1610446,120.555699,1
+red_out,7,Junria Rice,15.1607271,120.5558789,1
+red_out,8,A-One 24 Pharmacy,15.1602178,120.5561245,1
+red_out,9,Donenoo,15.1594261,120.5565505,1
+red_out,10,Hyun Jung Restaurant,15.1591389,120.556783,1
+red_out,11,Pizzeria Amore,15.1584349,120.5582242,1
+red_out,12,Amethy Hardware,15.1580075,120.5595885,1
+red_out,13,Friendship Bridge,15.1563725,120.5599941,1
+red_out,14,Jeremiah Pharmacy,15.1544893,120.560225,1
+red_out,15,Kim's Grill,15.1534307,120.5601416,1
+red_out,16,Cafe Princess,15.1521809,120.5593429,1
+red_out,17,MeetMeat,15.1499946,120.5592992,1
+red_out,18,52 Stone,15.1491974,120.5592982,1
+red_out,19,Korean E-Do Restaurant,15.1478102,120.5593176,1
+red_out,20,Sky Garden,15.1452097,120.5592382,1
+red_out,21,McDonalds Near Intersection Friendship,15.1444061,120.5594726,1
+red_out,22,GD Fran Hardware and Construction Supply,15.1445749,120.5609349,1
+red_out,23,SWAT Fitness,15.144719,120.5624647,1
+red_out,24,New Forest Park Resort,15.1452176,120.5660251,1
+red_out,25,Kim's Mall,15.1457162,120.5681033,1
+red_out,26,Maganda Drive-In Hotel,15.1472814,120.5722919,1
+red_out,27,Pampang Health Center,15.1482446,120.5744417,1
+red_out,28,SuperPharma,15.1490241,120.5772944,1
+red_out,29,Angeles City National Highschool,15.1493619,120.5789351,1
+red_out,30,Rafael Lazatin Memorial Medical Center,15.1463444,120.5812641,1
+red_out,31,Angeles Water District Office,15.1456208,120.582227,1
+red_out,32,Higante Street,15.1434859,120.5852531,1
+red_out,33,DAR Electronic Shop,15.1418497,120.5878885,1
+red_out,34,Angeles Sapangbato Terminal,15.1417173,120.5879174,1
+red_back,1,Angeles Sapangbato Terminal,15.1417173,120.5879174,1
+red_back,2,DAR Electronic Shop,15.1418497,120.5878885,1
+red_back,3,Higante Street,15.1434859,120.5852531,1
+red_back,4,Angeles Water District Office,15.1456208,120.582227,1
+red_back,5,Rafael Lazatin Memorial Medical Center,15.1463444,120.5812641,1
+red_back,6,Angeles City National Highschool,15.1493619,120.5789351,1
+red_back,7,SuperPharma,15.1490241,120.5772944,1
+red_back,8,Pampang Health Center,15.1482446,120.5744417,1
+red_back,9,Maganda Drive-In Hotel,15.1472814,120.5722919,1
+red_back,10,Kim's Mall,15.1457162,120.5681033,1
+red_back,11,New Forest Park Resort,15.1452176,120.5660251,1
+red_back,12,SWAT Fitness,15.144719,120.5624647,1
+red_back,13,GD Fran Hardware and Construction Supply,15.1445749,120.5609349,1
+red_back,14,McDonalds Near Intersection Friendship,15.1444061,120.5594726,1
+red_back,15,Sky Garden,15.1452097,120.5592382,1
+red_back,16,Korean E-Do Restaurant,15.1478102,120.5593176,1
+red_back,17,52 Stone,15.1491974,120.5592982,1
+red_back,18,MeetMeat,15.1499946,120.5592992,1
+red_back,19,Cafe Princess,15.1521809,120.5593429,1
+red_back,20,Kim's Grill,15.1534307,120.5601416,1
+red_back,21,Jeremiah Pharmacy,15.1544893,120.560225,1
+red_back,22,Friendship Bridge,15.1563725,120.5599941,1
+red_back,23,Amethy Hardware,15.1580075,120.5595885,1
+red_back,24,Pizzeria Amore,15.1584349,120.5582242,1
+red_back,25,Hyun Jung Restaurant,15.1591389,120.556783,1
+red_back,26,Donenoo,15.1594261,120.5565505,1
+red_back,27,A-One 24 Pharmacy,15.1602178,120.5561245,1
+red_back,28,Junria Rice,15.1607271,120.5558789,1
+red_back,29,Park's Bread and Cafe,15.1610446,120.555699,1
+red_back,30,Jung's Kitchen,15.1614098,120.5555062,1
+red_back,31,Beer Carnival,15.1617786,120.5553019,1
+red_back,32,Jinbae Jokbal,15.1620666,120.5551396,1
+red_back,33,Han Gang Korean BBQ,15.1625009,120.5549186,1
+red_back,34,Red Terminal,15.1629156,120.5547028,1

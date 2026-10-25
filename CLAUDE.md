@@ -4,7 +4,7 @@ Guidance for Claude Code in this repo. `SPEC.md` is the source of truth for API 
 
 ## What this is
 
-Biyahe Angeles (working name): plain-language jeepney directions for Angeles City over six color-coded routes (yellow, blue, purple, grey, red, darkyellow), 12 route records (6 colors x `out`/`back`). 3-day sprint MVP. Anything not in SPEC Section 5 is cut (Section 15). Do not add cut items (PostGIS, Redis, ORM, front-end framework, accounts, Tagalog UI, moderation screen, Alembic, self-hosted OSRM).
+Biyahe Angeles (working name): plain-language jeepney directions for Angeles City over six color-coded routes (yellow, blue, purple, grey, red, darkyellow), 9 route records (yellow, purple, grey: one-way circular, `out` only; blue, red, darkyellow: `out`/`back`). 3-day sprint MVP. Anything not in SPEC Section 5 is cut (Section 15). Do not add cut items (PostGIS, Redis, ORM, front-end framework, accounts, Tagalog UI, moderation screen, Alembic, self-hosted OSRM).
 
 Day-by-day plan: `roadmap.md`. Open items: `docs/OPEN_ITEMS.md`.
 
@@ -55,7 +55,7 @@ docs/       ARCHITECTURE.md, DECISIONS.md, OPEN_ITEMS.md
 waypoints.csv -> snap_routes.py (OSRM) -> routes.geojson (committed) -> validate.py -> seed.py
 ```
 
-- All 12 routes are hand-traced from memory as waypoints; there is no OSM route import. `snap_routes.py` fails if any of the 12 IDs has no waypoints.
+- All 9 routes are hand-traced from memory as waypoints; there is no OSM route import. `snap_routes.py` fails if any registry route ID has no waypoints.
 - `validate.py` runs in CI. Failures are in SPEC Section 9.3 (bbox, seq gaps, <2 stops, stop-ID collisions >100 m, line gaps >50 m, stop >100 m from line, missing properties, duplicate IDs).
 - `routes.geojson` is a snapshot; its line geometry comes from OSRM, which runs on OSM road data (ODbL). Record the snap date and per-route provenance in `data/README.md`. Credit "(c) OpenStreetMap contributors" on the page and in the README.
 
