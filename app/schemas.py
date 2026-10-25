@@ -50,6 +50,7 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     database: Literal["up", "down"]
+    route_data: Literal["loaded", "empty"]
 
 
 class WalkStep(BaseModel):

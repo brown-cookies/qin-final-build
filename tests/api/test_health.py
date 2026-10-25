@@ -1,13 +1,25 @@
-def test_health_up(client):
+def test_health_up(client, world):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "database": "up"}
+    assert r.json() == {"status": "ok", "database": "up", "route_data": "loaded"}
 
 
-def test_health_down_then_recovers(client, db_down):
+def test_health_up_empty(client, empty_world):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "database": "down"}
+    assert r.json() == {"status": "ok", "database": "up", "route_data": "empty"}
+
+
+def test_health_down_then_recovers(client, world, db_down):
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok", "database": "down", "route_data": "loaded"}
+
+
+def test_health_down_empty(client, empty_world, db_down):
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok", "database": "down", "route_data": "empty"}
 
 
 def test_health_back_up_after_recovery(client):

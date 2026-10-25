@@ -43,6 +43,9 @@ def load_route_data(app: FastAPI) -> None:
     app.state.routes = routes
     app.state.stops = [r for r in stop_rows]
     log.info("Loaded %d routes and %d stops", len(routes), len(stop_map))
+    if not routes:
+        log.warning("Started with no route data: run the seed command, then restart the api "
+                    "(docker compose restart api); route data is loaded only at startup")
 
 
 @asynccontextmanager
@@ -107,7 +110,9 @@ def health():
         database = "up"
     except db.DatabaseUnavailable:
         database = "down"
-    return {"status": "ok", "database": database}
+    # From startup data only, so it stays correct while the database is down.
+    route_data = "loaded" if app.state.routes else "empty"
+    return {"status": "ok", "database": database, "route_data": route_data}
 
 
 app.include_router(plan.router)

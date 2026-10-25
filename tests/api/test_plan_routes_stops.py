@@ -67,9 +67,44 @@ def test_no_route(client, world):
 
 def test_empty_route_data(client, empty_world):
     r = plan(client)
-    assert r.status_code == 404 and r.json()["error"] == "no_stop_nearby"
+    assert r.status_code == 503
+    assert set(r.json()) == {"error", "message"}
+    assert r.json()["error"] == "route_data_unavailable"
     r = client.get("/api/routes")
     assert r.status_code == 200 and r.json() == []
+    assert client.get("/api/routes/yellow_out").status_code == 404
+
+
+def test_empty_route_data_invalid_location_wins(client, empty_world):
+    r = plan(client, from_lat=15.5)
+    assert r.status_code == 400 and r.json()["error"] == "invalid_location"
+
+
+def test_empty_route_data_plan_with_db_down(client, empty_world, db_down):
+    r = plan(client)
+    assert r.status_code == 503 and r.json()["error"] == "route_data_unavailable"
+
+
+def test_load_warns_only_when_empty(client, raw_db, caplog):
+    from app import main
+    from tests.api.conftest import _clear, insert_world
+    _clear(raw_db)
+    with caplog.at_level("INFO", logger="biyahe"):
+        main.load_route_data(main.app)
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1 and warnings[0].name == "biyahe"
+    text = warnings[0].getMessage()
+    assert "no route data" in text and "seed" in text and "restart" in text
+    caplog.clear()
+    insert_world(raw_db)
+    try:
+        with caplog.at_level("INFO", logger="biyahe"):
+            main.load_route_data(main.app)
+        assert not [r for r in caplog.records if r.levelname == "WARNING"]
+        assert "Loaded 4 routes" in caplog.text
+    finally:
+        _clear(raw_db)
+        main.load_route_data(main.app)
 
 
 def test_routes_list(client, world):

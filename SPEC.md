@@ -173,7 +173,7 @@ Returns `[{"stop_id": "dau_terminal", "name": "Dau Terminal", "lat": 15.165, "ln
 
 ### 6.6 `GET /health` (FR-9)
 
-`200 {"status": "ok", "database": "up | down"}`. It returns `200` even when the database is down, so the process can be told apart from the database.
+`200 {"status": "ok", "database": "up | down", "route_data": "loaded | empty"}`. It returns `200` even when the database is down, so the process can be told apart from the database. `route_data` is `empty` when the route data loaded at startup had zero routes (for example the seed ran after the API started); it comes from startup data only, so it is correct while the database is down. Route data is loaded once at startup, so restart the api after seeding (`docker compose restart api`).
 
 ## 7. Data Contracts and Schemas
 
@@ -349,6 +349,7 @@ If a target is missed, the real number is reported, not adjusted.
 | Database unreachable on `/api/reports` | `503` `database_unavailable` |
 | Database unreachable on `/api/plan`, `/api/routes`, `/api/stops` | **Still served** if the graph and route data were loaded at startup; this is the practical benefit of the in-memory graph |
 | Database unreachable at startup | The process exits with a clear log line (fail fast); compose restarts it once the database is ready |
+| No route data loaded at startup (database reachable but unseeded when the process started) | `503` `route_data_unavailable` on `/api/plan` (after `invalid_location` validation); `/api/routes` returns `[]`; `/health` shows `route_data: empty`; a WARNING is logged |
 | Unhandled exception | `500` `internal_error`, details logged, never returned to the client |
 
 Status rule: `4xx` means the caller's input is wrong; `5xx` means our fault.
@@ -380,7 +381,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 
 ## 14. Manual Verification Checklist and Traceability
 
-1. Run `docker compose up`, then the seed command. `GET /health` returns `200` with `database: up`; the map page loads and shows six colored lines.
+1. Run `docker compose up`, then the seed command, then restart the api (`docker compose restart api`). `GET /health` returns `200` with `database: up` and `route_data: loaded`; the map page loads and shows six colored lines.
 2. `POST /api/reports` with a valid body returns `201`; `GET /api/reports` lists it first.
 3. `POST /api/reports` with an empty message, unknown color, only `lat`, or out-of-area coordinates returns `422` in the Section 12 error shape.
 4. `GET /api/reports?limit=0` and `limit=51` both return `422`.

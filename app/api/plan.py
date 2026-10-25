@@ -11,7 +11,7 @@ from app.schemas import ErrorResponse, PlanResponse
 router = APIRouter(prefix="/api")
 
 _errors = {400: {"model": ErrorResponse}, 404: {
-    "model": ErrorResponse}, 500: {"model": ErrorResponse}}
+    "model": ErrorResponse}, 500: {"model": ErrorResponse}, 503: {"model": ErrorResponse}}
 
 
 def _point(lat_raw: Optional[str], lng_raw: Optional[str], label: str) -> tuple:
@@ -39,6 +39,9 @@ def plan(
 ):
     start = _point(from_lat, from_lng, "starting point")
     end = _point(to_lat, to_lng, "destination")
+    if not request.app.state.routes:
+        raise ApiError(503, "route_data_unavailable",
+                       "Route data is not loaded. The service needs a restart or re-seed.")
     graph = request.app.state.graph
     radius = get_settings().walk_radius_m
     near_start = graph.stops_within(start[0], start[1], radius)
