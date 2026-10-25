@@ -42,6 +42,32 @@ def replace_route_data(routes: list, stops: list, route_stops: list) -> None:
             )
 
 
+def load_route_data() -> tuple:
+    """(routes, stops, route_stops) as dicts, read once at startup. route.line is [[lng, lat], ...]."""
+    with db.connection() as conn:
+        cur = conn.cursor(row_factory=dict_row)
+        cur.execute("SELECT route_id, color, direction, name, line FROM route ORDER BY route_id")
+        routes = cur.fetchall()
+        cur.execute("SELECT stop_id, name, lat, lng FROM stop ORDER BY stop_id")
+        stops = cur.fetchall()
+        cur.execute("SELECT route_id, seq, stop_id FROM route_stop ORDER BY route_id, seq")
+        route_stops = cur.fetchall()
+    return routes, stops, route_stops
+
+
+def search_stops(q: str, limit: int) -> list:
+    """Literal, case-insensitive substring match; \\, % and _ in q are escaped."""
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    with db.connection() as conn:
+        cur = conn.cursor(row_factory=dict_row)
+        cur.execute(
+            "SELECT stop_id, name, lat, lng FROM stop WHERE name ILIKE '%%' || %s || '%%' "
+            'ORDER BY name COLLATE "C", stop_id COLLATE "C" LIMIT %s',
+            (escaped, limit),
+        )
+        return cur.fetchall()
+
+
 def ping() -> None:
     with db.connection() as conn:
         conn.execute("SELECT 1")
