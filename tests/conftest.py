@@ -6,11 +6,12 @@ from fastapi.testclient import TestClient
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql://biyahe:biyahe@localhost:5432/biyahe_test"
+    "TEST_DATABASE_URL", "postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe_test"
 )
 _dbname = conninfo_to_dict(TEST_DATABASE_URL).get("dbname", "")
 if not _dbname.endswith("_test"):
-    raise RuntimeError(f"TEST_DATABASE_URL must name a database ending in _test, got {_dbname!r}")
+    raise RuntimeError(
+        f"TEST_DATABASE_URL must name a database ending in _test, got {_dbname!r}")
 
 # Must be set before app modules read settings.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
