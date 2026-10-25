@@ -49,3 +49,8 @@ Per tool and per cut: what, why, rejected alternative. Measured results are adde
 - Failure, trip 8 (Starbucks Near AUF to Blue End Terminal, expected Purple then Blue): Purple meets Blue at seq 75-76, before Starbucks Near AUF (seq 80). A real Purple jeep keeps looping, but the graph has no edge from the last stop of a circular route to its first, so the planner walks 491 m to a Blue stop and rides Blue only. Cost tuning cannot fix this; Yellow and Grey have the same limit. Known data and model gap; the test is `xfail(strict=True)`.
 - Passing with a different color than first expected: trip 9 (Jenra Mall to System Plus College) rides Grey after an 87 m walk; both Grey and Purple were accepted. Trip 10 rides Blue then Purple.
 - Rejected: counting the gap as a data fix by changing expected colors, and adding a wrap-around edge before measuring (a design change to record separately).
+
+## Empty route data signal (`app/main.py`, `app/api/plan.py`)
+- What: zero routes at startup logs one WARNING, `/health` adds `route_data: loaded | empty` from startup data, and `/api/plan` returns `503 route_data_unavailable` (after `invalid_location` validation); the README, CLAUDE.md and SPEC say to restart the api after seeding.
+- Why: seeding after the process started left a healthy-looking API whose plan calls blamed the user's location with `no_stop_nearby`; the restart rule above was documented but nothing signalled it.
+- Rejected: a runtime reload path (see the startup decision above, no runtime write path) and having the seed command restart the container (it would need the Docker socket inside the seed container).

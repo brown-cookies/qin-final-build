@@ -30,6 +30,7 @@ Requires Docker with Compose.
 ```bash
 docker compose up                                  # API + PostgreSQL
 docker compose run --rm api python -m data.seed    # one-time: load route data (validates first, safe to re-run)
+docker compose restart api                         # required after seeding: route data is loaded once at startup
 ```
 
 Then open:
@@ -60,9 +61,9 @@ Base path `/api`, except `/health`. Errors always have the shape `{"error": "<co
 | `GET` | `/api/stops?q=` | Stop-name search (case-insensitive, up to 10) |
 | `POST` | `/api/reports` | Submit a route problem report (validated, stored in PostgreSQL) |
 | `GET` | `/api/reports?limit=10` | Most recent reports, newest first (`limit` 1-50) |
-| `GET` | `/health` | `200` when the process is up; `database: up \| down` |
+| `GET` | `/health` | `200` when the process is up; `database: up \| down`, `route_data: loaded \| empty` (`empty` means restart the API after seeding) |
 
-Error codes: `invalid_location` (400), `no_stop_nearby` (404), `no_route` (404), `route_not_found` (404), `validation_error` (422), `database_unavailable` (503), `internal_error` (500). Details in [SPEC.md](SPEC.md) Sections 6 and 12.
+Error codes: `invalid_location` (400), `no_stop_nearby` (404), `no_route` (404), `route_not_found` (404), `validation_error` (422), `database_unavailable` (503), `route_data_unavailable` (503, `/api/plan` when no route data was loaded at startup), `internal_error` (500). Details in [SPEC.md](SPEC.md) Sections 6 and 12.
 
 ### Example: plan a trip
 
