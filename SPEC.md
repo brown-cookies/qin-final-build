@@ -269,7 +269,7 @@ waypoints.csv  -> snap_routes.py (OSRM) -> routes.geojson (committed) -> validat
 }
 ```
 
-Values above are placeholders. `source` is always `memory-traced`. `osm_relation_id` and `osm_node_id` are always `null`; the columns stay in `sql/schema.sql` so no schema change is needed, and they are the hook if an OSM import is added later. Stops are in route order. These properties map one to one onto the `route`, `stop` and `route_stop` columns in Section 8.
+Values above are placeholders. `source` is always `memory-traced`. `osm_relation_id` and `osm_node_id` are always `null`; the columns stay in `sql/schema.sql` so no schema change is needed, and they are the hook if an OSM import is added later. Stops are in route order; a stop object may carry an optional integer `seq`, which `validate.py` checks and `seed.py` ignores (the list index is the `seq`). These properties map one to one onto the `route`, `stop` and `route_stop` columns in Section 8.
 
 ### 9.2 Input: hand-traced waypoints
 
@@ -283,7 +283,7 @@ Values above are placeholders. `source` is always `memory-traced`. `osm_relation
    ```
 
    Rows with `is_stop=1` are named boarding places. Rows with `is_stop=0` are unnamed "via" points that force the snapped line onto the road the jeep really uses. The coordinates above are placeholders. Waypoints are dropped by hand in geojson.io (OpenStreetMap base map), from memory, then exported. `stop_id` is the lowercase slug of the stop name (Section 7), so the same place on two routes becomes one stop.
-2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/routes.geojson` in the Section 9.1 format. It fails if any registry route ID (Section 7) has no waypoints. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so the line follows real OSM roads.)
+2. **Snap (offline, once per data change):** `data/snap_routes.py` sends each route's waypoints, in order, to the OSRM public server and writes `data/routes/routes.geojson` in the Section 9.1 format. It fails if any registry route ID (Section 7) has no waypoints. It then densifies each line to at most 40 m between points (OSRM returns sparse points on straight roads, which would trip the 50 m gap check in 9.3 on good lines) and fails if any waypoint, via points included, is more than 50 m from its snapped line; that join check is what catches a bad snap. Runtime and CI never call OSRM. (OSRM itself runs on OSM road data, so the line follows real OSM roads.)
 
 ### 9.3 Validate, seed and provenance
 
@@ -296,8 +296,10 @@ Values above are placeholders. `source` is always `memory-traced`. `osm_relation
    - a stop is more than 100 m from its own route line;
    - a Feature is missing any Section 9.1 property, or two Features share a `route_id`.
 
-   Two different stop IDs closer than 30 m produce a warning, not a failure.
-2. **Seed:** `data/seed.py` replaces `route`, `stop`, `route_stop` from `routes.geojson` in one transaction: `DELETE` from `route_stop`, then `route` and `stop`, then `INSERT` `stop`, `route`, `route_stop` (foreign-key order). It never touches `report`.
+   Also failures: the file is missing, empty, not JSON or not a FeatureCollection; a geometry is not a `LineString` with 2 or more points; a coordinate is not a finite number; a `route_id` is not in the registry (including `yellow_back`, `purple_back`, `grey_back`) or its `color`, `direction` or `name` disagree with it; `source` is not `memory-traced`; `osm_relation_id` or `osm_node_id` is not `null`; a `stop_id` or `name` is empty. Distances are haversine; "from its own route line" means the nearest line point (the line is densified to at most 40 m, so no segment projection). A stop object may carry an optional integer `seq`; when present it must be 1..n in order (the file normally has none and the list index is the `seq`). A `stop_id` repeated on one route (a circular route passing the same place twice) is valid. The thresholds (100 m, 50 m, 30 m) are constants in `validate.py`; only `SERVICE_BBOX` comes from configuration. `validate.py` prints one line per problem, collects all of them, and exits 1; with no problems it exits 0.
+
+   Two different stop IDs closer than 30 m (anywhere in the file) produce a `WARNING` line, not a failure.
+2. **Seed:** `data/seed.py` (`python -m data.seed [path]`) runs the validate checks first and refuses to write if they fail. It applies `sql/schema.sql` (idempotent), then replaces `route`, `stop`, `route_stop` from `routes.geojson` in one transaction: `DELETE` from `route_stop`, then `route` and `stop`, then `INSERT` `stop`, `route`, `route_stop` (foreign-key order). `route_stop.seq` is the 1-based list order; `seq` in the file is ignored. One `stop` row exists per `stop_id`; its name and coordinates come from the first occurrence with routes in sorted `route_id` order and stops in list order. The SQL lives in `app/queries.py`. It never touches `report` (which has no foreign key to `route` or `stop`), and a failure rolls back and leaves the old data. An unreachable database gives a one-line log message and a non-zero exit.
 3. **Provenance:** `data/README.md` records the snap date and, per route, whether it was ridden or checked on the ground. Unverified routes are listed as known gaps.
 
 Fixing a wrong line: add a via waypoint on the correct road and re-run snap. Then re-run validate and seed.

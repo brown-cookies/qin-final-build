@@ -12,7 +12,7 @@ Goal: no unknown left that can block building. Output is `docs/OPEN_ITEMS.md`: o
 
 | # | Open item (SPEC Section 15) | Action | Answer lands in | Resolvable today? |
 |---|---|---|---|---|
-| 1 | ~~Which of the 12 route records exist in OSM~~ | Dropped: all 12 are hand-traced | n/a | n/a |
+| 1 | ~~Which of the 9 route records exist in OSM~~ | Dropped: all 9 are hand-traced | n/a | n/a |
 | 2 | ~~Relations matching by name but not `from`/`to`~~ | Dropped with item 1 | n/a | n/a |
 | 3 | Exact pin for each named place (Villa, Pampang, Pandan, Checkpoint, Holy, Highway, Balibago, Sapang Bato, Angeles, Main Gate, Friendship) | Pick the real boarding spot, record lat/lng; "Highway" and "Angeles" need a specific terminal or main stop | `data/README.md` | Yes |
 | 4 | The 10 test trips and expected colors | Write trips you personally know, with expected colors in order; include at least 2 single-jeep, 2 transfer, and the Purple/Grey and Yellow/Blue shared-stop cases | `tests/test_trips.py` (fixture list) | Yes, before planner work |
@@ -51,11 +51,13 @@ Goal: 9 valid route records in the database and `/api/plan` returning real answe
 
 **Track A: route data (morning)**
 
-- `data/raw/waypoints.csv` for all 9 routes, then `data/snap_routes.py` (OSRM, offline) writing `routes.geojson` directly; fails if any registry route has no waypoints.
-- `data/validate.py`: all Section 9.3 checks plus the 30 m near-duplicate stop warning; wire into CI for real.
-- `data/seed.py`: one transaction, FK-safe order, never touches `report`; confirm re-run is safe.
-- Tests in `tests/data/` for validate failures (seq gap, out-of-bbox, stop ID collision, line gap, missing property).
-- Start `data/README.md` provenance table as routes land.
+Status: done (maintainer still owes the real Jurio Foodhouse pin and pin confirmations; see `docs/OPEN_ITEMS.md`).
+
+- [x] `data/raw/waypoints.csv` for all 9 routes, then `data/snap_routes.py` (OSRM, offline) writing `routes.geojson` directly; fails if any registry route has no waypoints.
+- [x] `data/validate.py`: all Section 9.3 checks plus the 30 m near-duplicate stop warning; wired into CI for real.
+- [x] `data/seed.py`: one transaction, FK-safe order, never touches `report`; re-run is safe (tested).
+- [x] Tests in `tests/data/` for validate failures (seq gap, out-of-bbox, stop ID collision, line gap, missing property) and seed (idempotent, reports survive, rollback).
+- [x] `data/README.md` provenance table, pin table, known gaps.
 
 **Track B: planner and endpoints (afternoon)**
 
