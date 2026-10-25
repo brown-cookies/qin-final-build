@@ -68,7 +68,7 @@ docker compose up                      # API (:8000) + Postgres; schema applied 
                                        # host ports: API_PORT / POSTGRES_PORT override 8000 / 5432
 docker compose run --rm api python -m data.seed   # validate, then replace route/stop/route_stop; re-runnable
 pytest                                 # needs a Postgres test DB: TEST_DATABASE_URL, db name must end in _test
-                                       # (default postgresql://biyahe:biyahe@localhost:5432/biyahe_test; created if
+                                       # (default postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe_test; created if
                                        # missing; `docker compose up db` provides the server)
 python data/validate.py [path]         # SPEC 9.3 checks, no DB/network; exit 1 on failure; also runs in CI
 ```

@@ -20,7 +20,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgresql://biyahe:biyahe@localhost:5432/biyahe_test
+      TEST_DATABASE_URL: postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
