@@ -1,9 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import db, queries
@@ -120,3 +122,6 @@ app.include_router(plan.router)
 app.include_router(routes.router)
 app.include_router(stops.router)
 app.include_router(reports.router)
+
+# Mounted last so it never shadows /health, /docs or /api/*.
+app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "web", html=True), name="web")

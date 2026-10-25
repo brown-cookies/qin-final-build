@@ -1,0 +1,17 @@
+<verification>
+  <iteration>2</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met (read + run) - mount is last in app/main.py after four include_router calls; / , /health, /docs, /api/routes not shadowed.</criterion>
+    <criterion id="2">met (read + run) - no new env/handler; /nope -> 404 application/json {"error":"not_found","message":"Not Found"}.</criterion>
+    <criterion id="3">met (read + run for /) - web/index.html Hello world served. .gitkeep presence not re-checked this iteration (read in iter 1).</criterion>
+    <criterion id="4">met (run) - tests/api/test_static.py passes in full suite.</criterion>
+    <criterion id="5">met (read) - git status/diff vs HEAD: app/main.py (+5), tests/api/test_errors.py (+2), web/index.html, tests/api/test_static.py, .claude/team only. Nothing committed.</criterion>
+  </criteria>
+  <test_results>
+    <result>pytest -q (scratchpad venv, Postgres on 127.0.0.1:5432) -> 233 passed, 1 warning (httpx deprecation), 0 failed</result>
+  </test_results>
+  <runtime_check result="yes">uvicorn on :8766: / 200 html Hello world; /health 200 json; /docs 200 html; /api/routes 200 json; /nope 404 not_found json.</runtime_check>
+  <bugs></bugs>
+  <self_critique>Iteration 1 bug fixed (test_errors.py inserts /_boom route ahead of mount, +2 lines). Not tested: Docker image build, Linux paths.</self_critique>
+</verification>

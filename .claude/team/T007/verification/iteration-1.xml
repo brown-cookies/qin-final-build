@@ -1,0 +1,29 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>fail</verdict>
+  <criteria>
+    <criterion id="1">met (read + run) - mount is the last statement, after the four include_router calls, uses Path(__file__).parent.parent / "web", html=True. Run: / , /health, /docs, /api/routes not shadowed.</criterion>
+    <criterion id="2">met (read + run) - no new env var/handler; GET /nope -> 404 {"error":"not_found","message":"Not Found"} application/json.</criterion>
+    <criterion id="3">met (read) - web/index.html is a Hello world page; web/.gitkeep still present.</criterion>
+    <criterion id="4">met for the new module (run: its 5 tests pass), but see bug 1: the change breaks an existing test.</criterion>
+    <criterion id="5">met (git status) - changed: app/main.py, web/index.html, tests/api/test_static.py, plus .claude/team. Nothing committed.</criterion>
+  </criteria>
+  <test_results>
+    <result>pytest -q (venv from requirements.txt, Postgres 16 at 127.0.0.1:5432) -> 1 failed, 232 passed. FAILED tests/api/test_errors.py::test_unhandled_exception_500_does_not_leak (got 404, expected 500)</result>
+    <result>Same test on clean HEAD copy (git archive HEAD) -> 3 passed in tests/api/test_errors.py (regression is caused by this change)</result>
+  </test_results>
+  <runtime_check result="yes">
+    uvicorn app.main:app on :8765 against the live DB. / -> 200 text/html "Hello world"; /health -> 200 {"status":"ok","database":"up","route_data":"loaded"}; /docs -> 200 html; /api/routes -> 200 JSON; /nope -> 404 {"error":"not_found","message":"Not Found"}. Note: the already-running docker api container (port 8000) is an older image without this change, so it was not used.
+  </runtime_check>
+  <bugs>
+    <bug>
+      <description>The "/" mount, now the last route, breaks tests/api/test_errors.py::test_unhandled_exception_500_does_not_leak. That test registers /_boom with @app.get at test time, so it lands after the catch-all StaticFiles mount and is shadowed (404 instead of 500). Fix is on the test side, e.g. insert the temp route before the mount, or remove/restore the mount around it. Criterion 5 forbids unrelated edits, so the implementer must decide how to do this minimally. Production behavior is unaffected.</description>
+      <reproduction>pytest tests/api/test_errors.py::test_unhandled_exception_500_does_not_leak  (needs Postgres test DB)</reproduction>
+      <severity>medium</severity>
+      <owner>implementer</owner>
+    </bug>
+  </bugs>
+  <self_critique>
+    Run: full pytest, uvicorn plus curl on the five paths. Only read: web/.gitkeep presence, no-new-env/handler (diff is 5 lines in main.py). Not tested: Docker image build (Dockerfile may need web/ copied; spec forbids Dockerfile edits, and I did not check whether it already copies web/), Windows vs Linux path behavior.
+  </self_critique>
+</verification>

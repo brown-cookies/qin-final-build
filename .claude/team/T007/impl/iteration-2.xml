@@ -1,0 +1,11 @@
+<implementation>
+  <iteration>2</iteration>
+  <files>
+    <file path="tests/api/test_errors.py">Line app.router.routes.insert(0, app.router.routes.pop()) with comment was already present in test_unhandled_exception_500_does_not_leak; reviewed, correct, kept, not duplicated. No other change.</file>
+  </files>
+  <tests><test>Not run (verifier runs pytest).</test></tests>
+  <commands_run><command>Grep of test_errors.py</command></commands_run>
+  <design_decisions><decision>Kept the existing insert/pop line as the owner specified; rejected adding a duplicate.</decision></design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Unrun; relies on the finally-cleanup filtering by path "/_boom" to leave the app routes intact.</self_critique>
+</implementation>

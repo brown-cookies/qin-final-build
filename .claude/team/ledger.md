@@ -15,3 +15,10 @@ T005 | pipeline | verify iteration 2 | passed
 T006 | pipeline | plan (circular wrap edge, trip 8) | in_progress
 T006 | pipeline | implement iteration 1 | in_progress
 T006 | pipeline | implement iteration 1 (trip 8 still fails, criteria 9/10 unmet) | escalated
+T007 | pipeline | plan (serve web/ at /) | in_progress
+T007 | pipeline | implement iteration 1 | in_progress
+T007 | pipeline | verify iteration 1 | in_progress
+T007 | pipeline | verify iteration 1 (1 existing test broken by mount-last; spec conflict) | blocked_on_user
+T007 | pipeline | implement iteration 2 (fix /_boom test ordering) | in_progress
+T007 | pipeline | verify iteration 2 | in_progress
+T007 | pipeline | verify iteration 2 (233 passed, verifier pass) | passed
