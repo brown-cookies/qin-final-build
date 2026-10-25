@@ -12,8 +12,10 @@ TABLES = ("route", "stop", "route_stop")
 
 
 @pytest.fixture
-def seed_db(client, raw_db):
+def seed_db(client, raw_db, monkeypatch):
     """Gives seed.main the pool slot (the API client keeps its own pool) and cleans route data."""
+    # conftest sets a 1 s pool timeout; a cold first connection can exceed it and make seed.main return 1.
+    monkeypatch.setenv("DB_POOL_TIMEOUT_S", "10")
     real = db._pool
     db._pool = None
     raw_db.execute("TRUNCATE route_stop, route, stop")
@@ -161,6 +163,8 @@ def test_database_unreachable_is_one_clean_exit(seed_db, monkeypatch, caplog):
     monkeypatch.setenv("DB_POOL_TIMEOUT_S", "1")
     assert seed.main([]) == 1
     assert "database unreachable" in caplog.text
+    # The pool's own per-retry warnings are silenced so the failure reads as one line.
+    assert not [r for r in caplog.records if r.name.startswith("psycopg.pool")]
     assert db._pool is None
 
 

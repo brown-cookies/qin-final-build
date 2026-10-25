@@ -34,6 +34,16 @@ class FileProblem(Exception):
     """The file cannot be checked at all (missing, not JSON, wrong top-level shape)."""
 
 
+def _up(d):
+    """Distance text for an over-limit error: rounded up, so it never reads equal to the limit."""
+    return f"{math.ceil(d * 10) / 10:.1f}"
+
+
+def _down(d):
+    """Distance text for an under-limit warning: rounded down, so it never reads equal to the limit."""
+    return f"{math.floor(d * 10) / 10:.1f}"
+
+
 def _num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
@@ -88,7 +98,7 @@ def _check_line(rid, geom, bbox, errors):
     for i in range(1, len(line)):
         gap = dist_m(line[i - 1], line[i])
         if gap > MAX_LINE_GAP_M:
-            errors.append(f"{rid}: line gap of {gap:.0f} m between points {i - 1} and {i} (max {MAX_LINE_GAP_M} m)")
+            errors.append(f"{rid}: line gap of {_up(gap)} m between points {i - 1} and {i} (max {MAX_LINE_GAP_M} m)")
     return line
 
 
@@ -136,7 +146,7 @@ def _check_stops(rid, stops, line, bbox, errors):
                             break
                     if d > MAX_STOP_TO_LINE_M:
                         errors.append(
-                            f"{rid} seq {pos} stop {label}: {d:.0f} m from its route line (max {MAX_STOP_TO_LINE_M} m)"
+                            f"{rid} seq {pos} stop {label}: {_up(d)} m from its route line (max {MAX_STOP_TO_LINE_M} m)"
                         )
     return good
 
@@ -225,7 +235,7 @@ def check_collection(data):
                 d = dist_m((ln1, la1), (ln2, la2))
                 if d > MAX_STOP_COLLISION_M:
                     errors.append(
-                        f"{r1} / {r2} stop {sid}: same stop_id {d:.0f} m apart (max {MAX_STOP_COLLISION_M} m)"
+                        f"{r1} / {r2} stop {sid}: same stop_id {_up(d)} m apart (max {MAX_STOP_COLLISION_M} m)"
                     )
 
     # Different stop_ids that are almost the same place: warn only.
@@ -239,7 +249,7 @@ def check_collection(data):
             d = dist_m((ln1, la1), (ln2, la2))
             if d < NEAR_DUPLICATE_M:
                 warned.add((s1, s2))
-                warnings.append(f"WARNING stops {s1} and {s2} are only {d:.0f} m apart (under {NEAR_DUPLICATE_M} m)")
+                warnings.append(f"WARNING stops {s1} and {s2} are only {_down(d)} m apart (under {NEAR_DUPLICATE_M} m)")
 
     stats = {"routes": len(seen_ids), "stops": len(by_id), "stop_entries": n_stops}
     return errors, warnings, stats

@@ -309,6 +309,18 @@ def test_exactly_30m_apart_does_not_warn_but_just_under_does():
     assert any("blue_out_b" in w for w in run(c)[1])
 
 
+def test_distance_text_never_equals_the_limit_it_is_compared_to():
+    # 29.99 m must not print as "30 m (under 30 m)"; 100.01 m must not print as "100 m (max 100 m)".
+    c = valid_collection()
+    shifted_twin(c, 29.99)
+    warning = next(w for w in run(c)[1] if "blue_out_b" in w)
+    assert "29.9 m apart" in warning
+    c = valid_collection()
+    shifted_twin(c, 100.01)
+    error = next(e for e in errs(c) if "apart" in e)
+    assert "100.1 m apart" in error
+
+
 def test_warnings_still_printed_when_there_is_a_failure(tmp_path, capsys):
     c = valid_collection()
     shifted_twin(c, 20)

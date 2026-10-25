@@ -44,6 +44,8 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     path = Path(argv[0]) if argv else validate.DEFAULT_PATH
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    # The pool logs a multi-line warning per retry while the DB is down; our own line says it once.
+    logging.getLogger("psycopg.pool").setLevel(logging.ERROR)
 
     try:
         data, errors, warnings, _stats = validate.check_file(path)
