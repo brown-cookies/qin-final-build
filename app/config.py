@@ -54,7 +54,7 @@ def load_settings(env: Optional[Mapping[str, str]] = None) -> Settings:
     env = os.environ if env is None else env
     return Settings(
         # Local dev default only; compose and CI set their own.
-        database_url=env.get("DATABASE_URL", "postgresql://biyahe:biyahe@localhost:5432/biyahe"),
+        database_url=env.get("DATABASE_URL", "postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe"),
         service_bbox=_bbox(env.get("SERVICE_BBOX", "15.08,15.22,120.50,120.68")),
         walk_radius_m=_number(env, "WALK_RADIUS_M", "500"),
         transfer_radius_m=_number(env, "TRANSFER_RADIUS_M", "100"),
