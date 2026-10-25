@@ -109,6 +109,20 @@ def test_two_jeep_steps_and_summary(g):
     )
 
 
+def test_three_jeep_summary_keeps_the_middle_ride():
+    stops = {
+        "a": ("Alpha", (0, 0)), "b": ("Bravo", (1000, 0)), "c": ("Charlie", (2000, 0)),
+        "d": ("Delta", (3000, 0)), "e": ("Echo", (4000, 0)), "f": ("Foxtrot", (5000, 0)),
+    }
+    routes = {"yellow_out": ["a", "b", "c"], "darkyellow_out": ["c", "d", "e"], "red_out": ["e", "f"]}
+    _, steps = trip(mk(stops, routes), pt(0, 0), pt(5000, 0))
+    assert [s["type"] for s in steps] == ["walk", "ride", "transfer", "ride", "transfer", "ride", "walk"]
+    assert build_summary(steps) == (
+        "Walk to Alpha, ride Yellow to Charlie, transfer to Dark yellow, get off at Echo, "
+        "transfer to Red, get off at Foxtrot, walk to your destination."
+    )
+
+
 def test_transfer_by_walking_between_stops():
     g2 = mk(
         {"a": ("A", (0, 0)), "b": ("B", (1000, 0)), "c": ("C", (1060, 0)), "d": ("D", (2000, 0))},
