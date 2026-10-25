@@ -44,7 +44,7 @@ docs/       ARCHITECTURE.md, DECISIONS.md, OPEN_ITEMS.md
 - `SERVICE_BBOX` is `lat_min,lat_max,lng_min,lng_max`.
 - Route ID is `{color}_{direction}`, lowercase, permanent. Split on the **last** underscore (`darkyellow_out` -> `darkyellow`, `out`).
 - Same real place = same `stop_id` on every route (lowercase slug of name). That is what creates transfers. Purple/Grey share Checkpoint and Highway; Yellow/Blue share Pampang.
-- `/health` returns `200` even when the DB is down (`database: down`). `/api/plan`, `/api/routes`, `/api/stops` keep working from startup data if the DB drops; `/api/reports` returns `503 database_unavailable`. DB down at startup: exit with a clear log line.
+- `/health` returns `200` even when the DB is down (`database: down`) and reports `route_data: loaded|empty` from startup data; `empty` means the API started before the seed, so restart it after seeding (`docker compose restart api`) and `/api/plan` returns `503 route_data_unavailable` until then. `/api/plan`, `/api/routes`, `/api/stops` keep working from startup data if the DB drops; `/api/reports` returns `503 database_unavailable`. DB down at startup: exit with a clear log line.
 - `lat`/`lng` in a report come together or not at all, and mark the problem location, not the user.
 - Ride distance in the planner is straight-line between stops (accepted MVP approximation).
 - Report `status` is `new|seen|fixed`; maintainer edits it in SQL.
@@ -67,6 +67,7 @@ Keep this block accurate.
 docker compose up                      # API (:8000) + Postgres; schema applied at startup
                                        # host ports: API_PORT / POSTGRES_PORT override 8000 / 5432
 docker compose run --rm api python -m data.seed   # validate, then replace route/stop/route_stop; re-runnable
+docker compose restart api                       # required after seeding: route data is loaded once at startup
 pytest                                 # needs a Postgres test DB: TEST_DATABASE_URL, db name must end in _test
                                        # (default postgresql://biyahe:biyahe@127.0.0.1:5432/biyahe_test; created if
                                        # missing; `docker compose up db` provides the server)
