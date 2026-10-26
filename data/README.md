@@ -58,6 +58,9 @@ When a `stop_id` appears on several routes, seed stores one `stop` row. Its name
 - Blue `out`/`back` direction versus the SPEC registry (Pandan to Pampang) is unresolved; the data is left as traced.
 - All 9 routes are memory-traced and unverified (table above).
 - Ride distance in the planner is straight-line between stops, not the snapped line length.
+- 48 pairs of distinct stops are under 30 m apart (`validate.py` WARNING); most are different shops on one street, but a few (for example `jollibee_rizal_street` and `lorraine_technical_school`, 3.7 m) are probably one place under two names. Review and merge by giving them the same name.
+- OSRM's driving profile follows roads a car can use, which may differ from the roads a jeep uses; a wrong stretch is fixed by adding a via waypoint and re-snapping.
+- The snapped lines come from the public OSRM demo server on one date (2026-10-25); re-snapping later can change the lines if OSM changed.
 
 ## Re-snap after a data change
 

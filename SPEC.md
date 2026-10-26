@@ -75,7 +75,7 @@ Versions are pinned in `requirements.txt` and the Dockerfile, not duplicated her
 
 ## 4. Current State and 3-Day Plan
 
-Nothing is built. Route data does not exist anywhere and must be created (Section 9), so it is the critical path: **start on it on Day 1, in parallel with the code.**
+This table is the original plan and is kept as written (`docs/roadmap.md` is the working plan and records the deviation). Status at the end of the sprint: everything in Section 5 is built except the map page's stop-name search (FR-8, cut as this section allows; see `docs/DECISIONS.md`). Route data was the critical path, so it was started first.
 
 | Day | Work | Done when |
 |---|---|---|
@@ -96,7 +96,7 @@ Each requirement is pass/fail against a running service.
 - **FR-5 Submit a report (required POST).** `POST /api/reports` validates input with Pydantic and writes one row to PostgreSQL.
 - **FR-6 Recent reports (required GET).** `GET /api/reports?limit=` returns the most recent reports, newest first.
 - **FR-7 Seed and validate data.** `seed.py` loads `routes.geojson` into PostgreSQL and is safe to re-run (it replaces route data, never touches `report`). `validate.py` fails on bad data and runs in CI.
-- **FR-8 Map page.** A static page shows the six route lines in their colors, lets the user pick origin and destination (by tapping the map or searching a stop name), and shows the plan steps.
+- **FR-8 Map page.** A static page shows the six route lines in their colors, lets the user pick origin and destination (by tapping the map or searching a stop name), and shows the plan steps. *Status: map tap is built; stop-name search is not (cut, see `docs/DECISIONS.md`).*
 - **FR-9 Health.** `GET /health` returns `200` when the process is up, and reports whether the database is reachable.
 - **FR-10 One error shape.** Every error response is `{"error": "<code>", "message": "<plain text>"}`, including validation errors.
 
@@ -316,8 +316,9 @@ All are environment variables with defaults; none are hardcoded constants.
 | `TRANSFER_RADIUS_M` | 100 | Stops within this distance count as one transfer point |
 | `TRANSFER_PENALTY_KM` | 1.0 | Flat cost added each time you board a jeep |
 | `WALK_COST_FACTOR` | 2.0 | Walking costs this many times riding, per km |
+| `DB_POOL_TIMEOUT_S` | 3 | Max seconds to wait for a database connection, also the startup wait; a dead database then gives `503` instead of a hang |
 
-The two cost values are starting guesses. They are tuned once against the 10 test trips (Section 11) and the final values and the reason go into `DECISIONS.md`.
+The two cost values are starting guesses. The 10 test trips (Section 11) met the target at the defaults, so they were left untuned; the reason is in `DECISIONS.md`.
 
 **Planner definition** (so it can be implemented and explained exactly):
 
@@ -329,7 +330,7 @@ The two cost values are starting guesses. They are tuned once against the 10 tes
 
 ## 11. Measurement Requirements
 
-No figures exist yet; these are targets, and results are written into `docs/DECISIONS.md` when measured.
+These are targets; measured results, with hardware, are in `docs/DECISIONS.md` ("Measured results"). Result for plan correctness: 10 of 10.
 
 | Metric | Target | How measured |
 |---|---|---|
@@ -351,6 +352,8 @@ If a target is missed, the real number is reported, not adjusted.
 | Database unreachable at startup | The process exits with a clear log line (fail fast); compose restarts it once the database is ready |
 | No route data loaded at startup (database reachable but unseeded when the process started) | `503` `route_data_unavailable` on `/api/plan` (after `invalid_location` validation); `/api/routes` returns `[]`; `/health` shows `route_data: empty`; a WARNING is logged |
 | Unhandled exception | `500` `internal_error`, details logged, never returned to the client |
+
+Other HTTP errors (unknown path, wrong method) use the same shape with `not_found` (404) and `method_not_allowed` (405), or `http_<status>` for any other status.
 
 Status rule: `4xx` means the caller's input is wrong; `5xx` means our fault.
 
@@ -437,7 +440,7 @@ Dockerfile, docker-compose.yml, requirements.txt, .github/workflows/ci.yml
 3. English only.
 4. Reports are public immediately.
 
-**Open items:**
+**Open items** (current status is kept in `docs/OPEN_ITEMS.md`; the list below is the original):
 
 - `TRANSFER_PENALTY_KM` and `WALK_COST_FACTOR` final values: set after the first run of the 10 test trips.
 - Exact pin for each named place in the Section 7 registry (Villa, Pampang, Pandan, Checkpoint, Holy, Highway, Balibago, Sapang Bato, Angeles, Main Gate, Friendship): decide the real boarding spot for each and write it in `data/README.md`. "Highway" and "Angeles" are broad names, so pick the actual terminal or main stop you mean.

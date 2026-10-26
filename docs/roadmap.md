@@ -6,6 +6,10 @@ Source: `SPEC.md`. Plan: three calendar days. Day 1 starts with the open-items r
 
 Effort split (rough): Day 1 ~30% (Day 0 block ~10% + scaffold ~20%), Day 2 ~35%, Day 3 ~35%.
 
+## Status at the end of the sprint (2026-10-26)
+
+All three days' work is done except what is listed here. Open: map-page stop-name search (cut first, as planned), a real Jurio Foodhouse pin and ridden verification of the routes, the deferred ride-highlight matching fix, and watching CI run on GitHub. The tuning step on Day 3 was skipped on purpose because the 10 trips met the target at the defaults. Details: `docs/OPEN_ITEMS.md`, `docs/DECISIONS.md` (measured results, bugs, known limitations).
+
 ## Day 1, morning: Open-items register (Day 0 block)
 
 Goal: no unknown left that can block building. Output is `docs/OPEN_ITEMS.md`: one row per item with owner, status, answer and the file where the answer lives. Timebox to about half the morning so the scaffold still lands the same day.
