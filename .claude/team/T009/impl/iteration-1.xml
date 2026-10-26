@@ -1,0 +1,21 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="web/map.js">setPoint/resetPoints state, map click handler, dot click (stopPropagation, point at dot position), hover popup open/close, icon imagePath /images/</file>
+    <file path="web/index.html">Find route (inert) and Reset buttons at top of #panel</file>
+    <file path="web/style.css">#actions flex row for the buttons</file>
+  </files>
+  <tests>
+    <test>pytest could not run: ModuleNotFoundError psycopg in this environment. Tap behavior needs manual browser check.</test>
+  </tests>
+  <commands_run>
+    <command>python -m pytest -q (failed on missing psycopg)</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Dot click uses L.DomEvent.stopPropagation; rejected bubblingMouseEvents:false (less explicit).</decision>
+    <decision>Set Icon.Default imagePath "/images/" explicitly; rejected CSS auto-detection (known 404 risk).</decision>
+    <decision>Popup closeButton disabled since it closes on mouseout.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Unverified in a browser: double count prevention and icon 200. Popup on a dot may sit under the cursor and flicker mouseout; not checked.</self_critique>
+</implementation>

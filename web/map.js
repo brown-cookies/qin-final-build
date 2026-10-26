@@ -49,6 +49,28 @@ function toLatLng(coord) {
   return [coord[1], coord[0]];
 }
 
+// Served from the vendored web/images/, not auto-detected from the CSS.
+L.Icon.Default.prototype.options.imagePath = "/images/";
+
+const points = [];
+const pointMarkers = [];
+
+// Origin first, then destination; further taps are ignored until Reset.
+function setPoint(latlng) {
+  if (points.length >= 2) return;
+  points.push(latlng);
+  pointMarkers.push(L.marker(latlng).addTo(map));
+}
+
+function resetPoints() {
+  pointMarkers.forEach((m) => m.remove());
+  pointMarkers.length = 0;
+  points.length = 0;
+}
+
+map.on("click", (e) => setPoint(e.latlng));
+document.getElementById("reset").addEventListener("click", resetPoints);
+
 function drawRoute(color, collection, lines) {
   const hex = COLORS[color].hex;
   const seen = new Set();
@@ -65,15 +87,23 @@ function drawRoute(color, collection, lines) {
       const name = feature.properties.name;
       if (seen.has(name)) continue;
       seen.add(name);
-      L.circleMarker(toLatLng(feature.geometry.coordinates), {
+      const latlng = toLatLng(feature.geometry.coordinates);
+      const dot = L.circleMarker(latlng, {
         radius: 5,
         color: "#222",
         weight: 1,
         fillColor: hex,
         fillOpacity: 1,
       })
-        .bindPopup(name)
+        .bindPopup(name, { closeButton: false })
         .addTo(map);
+      dot.on("mouseover", () => dot.openPopup());
+      dot.on("mouseout", () => dot.closePopup());
+      dot.on("click", (e) => {
+        // Stop here so the map click handler does not count the tap twice.
+        L.DomEvent.stopPropagation(e);
+        setPoint(L.latLng(latlng));
+      });
     }
   }
 }
