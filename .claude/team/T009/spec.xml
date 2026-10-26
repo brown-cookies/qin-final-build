@@ -1,0 +1,56 @@
+<spec>
+  <user_stories>
+    - As a rider, I tap the map once to set where I am starting from and tap again to set where I am going.
+    - As a rider, I see a marker at each point I chose so I know what was registered.
+    - As a rider, I can tap a stop dot to use that stop as my point, and hover a dot to see its name.
+    - As a rider, I can press Reset to clear my points and start over.
+    - As a rider, I see a "Find route" button in the side panel.
+  </user_stories>
+  <acceptance_criteria>
+    1. Scope: only web/index.html, web/map.js, web/style.css change (route lines, stop dots, legend, banner, fitBounds, load failure/empty handling) is unchanged. Pass: git diff touches only those three files, and the map still renders all six routes.
+    2. First tap on empty map sets origin: one marker appears at the tapped lat/lng.
+    3. Second tap on empty map sets destination: a second marker appears at the tapped lat/lng; two markers total.
+    4. Any tap after both points are set (map or stop dot) is ignored: no marker added, none moved.
+    5. Tapping a stop dot counts as a tap and places the marker at the dot's own position (not the click position), filling origin if empty, else destination.
+    6. A single dot click creates exactly one marker and advances state by one point (the map click handler does not also fire).
+    7. Origin and destination markers use the same Leaflet default marker icon, loaded from vendored web/images/ (marker-icon.png / shadow); no request to any third-party host other than OSM tiles. Pass: network panel shows the icon served from the local origin with 200.
+    8. Hovering a stop dot (mouseover) opens a popup with the stop name; clicking a dot does not depend on a popup to show the name. Pass: popup appears on hover without a click.
+    9. #panel contains, at the top, two buttons: "Find route" and "Reset", both enabled on page load.
+    10. Clicking "Find route" does nothing observable: no network request, no DOM change, no state change.
+    11. Clicking "Reset" removes both markers (or whichever exist) and returns to the "pick origin" state: the next tap sets origin again. Reset with no points set is harmless.
+    12. After Reset, the full flow (origin, destination, ignore further) works again, repeatedly.
+    13. No /api/plan call is made(/api/routes, /api/routes/{id}), static assets, and OSM tiles. No loading state, steps list, highlighting, or stop-data storage is added.
+    14. The banner is not shown, hidden, or cleared by any new behavior (banner logic untouched).
+    15. No build step, no new files outside the three named (vendored images already exist), no backend or docs changes.
+    16. pytest is run and its real output (including any failures) is reported; tap behavior is verified manually in a browser since pytest cannot cover it.
+  </acceptance_criteria>
+  <assumptions>
+    - OWNER DICEDED: Dragging the map is not a tap; only Leaflet click events count.
+    - OWNER DICEDED: Dots from different routes at the same stop each count as a tap on that dot's own position (same coordinates for a shared stop).
+    - OWNER CONFIRMED: markers are not draggable and have no popup/tooltip.
+    - Layout is desktop only; no responsive CSS. Button styling is minimal and the implementer's call.
+    - The popup-on-hover behavior replaces click-to-open for dots; OWNER DECIDED: the popup closes on mouseout.
+    - Taps on legend/banner/panel are not map taps.
+  </assumptions>
+  <edge_cases>
+    - Tap on a dot while state is "pick destination": sets destination at dot position.
+    - Tap on a dot while both points are set: ignored.
+    - Rapid double-click on the map: may register two taps (origin then destination); Leaflet double-click zoom is left as is (OWNER DECIDED).
+    - Reset immediately followed by a dot click: sets origin at the dot, once.
+    - Origin and destination at the same position (same dot tapped twice): permitted; two markers are placed.
+    - Route data failed to load: no dots exist, but map taps still set points.
+  </edge_cases>
+  <risks>
+    <risk severity="medium">Leaflet vector layers (circleMarker) propagate click to the map unless propagation is stopped; a double count is the likely defect and needs manual browser verification.</risk>
+    <risk severity="low">Default marker icon path auto-detection can break when assets are served from the root; the icon may 404 and must be checked in the network panel.</risk>
+    <risk severity="low">Origin and destination share one icon, so the user cannot tell which is which; this is an owner decision, accepted.</risk>
+    <risk severity="low">Tap behavior is untestable by pytest; correctness depends on manual verification.</risk>
+  </risks>
+  <dependencies>
+    - web/leaflet.js, web/leaflet.css, web/images/marker-icon*.png and marker-shadow.png (already vendored).
+    - Existing code in web/map.js (drawRoute, load) and the empty aside#panel in web/index.html.
+  </dependencies>
+  <self_critique>
+    Every story maps to criteria (tap/markers: 2-7; dots: 5, 6, 8; Reset: 11-12; Find route: 9-10). Criteria are observable, though most need a manual browser check. Biggest uncertainty: hover-popup close behavior and double-click timing are unspecified and left to the implementer; neither blocks the spec.
+  </self_critique>
+</spec>

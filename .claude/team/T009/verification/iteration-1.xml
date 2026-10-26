@@ -1,0 +1,33 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met - git diff touches only web/index.html, web/map.js, web/style.css (plus .claude/team bookkeeping); map renders 9 route fetches and 366 dot paths, no page errors.</criterion>
+    <criterion id="2">met - first tap at (100,150) -> 1 marker, container point [100,150].</criterion>
+    <criterion id="3">met - second tap -> 2 markers at [100,270].</criterion>
+    <criterion id="4">met - third map tap and third dot click: marker count stayed 2, points.length 2, positions unchanged.</criterion>
+    <criterion id="5">met - dot clicked 2px/1px off-center: marker at [791,198], equal to dot center [791,198]. Dot tap while destination empty filled destination.</criterion>
+    <criterion id="6">met - single dot click: 1 marker, points.length 1.</criterion>
+    <criterion id="7">met - /images/marker-icon.png and marker-shadow.png requested from localhost:8011, both 200; only non-local hosts requested were OSM tiles (45).</criterion>
+    <criterion id="8">met - mouse hover without click opened popup "Blue End Terminal"; popup count 0 after mouseout.</criterion>
+    <criterion id="9">met - first child of #panel is #actions with "Find route", "Reset"; both enabled on load.</criterion>
+    <criterion id="10">met - Find route click: 0 new requests, DOM+state snapshot identical (tile imgs excluded; an earlier raw content() comparison differed only because of tile/popup churn, re-checked with a controlled snapshot).</criterion>
+    <criterion id="11">met - Reset -> 0 markers, 0 points; Reset again harmless; reset then dot click -> 1 marker.</criterion>
+    <criterion id="12">met - flow repeated after Reset, 2 markers again.</criterion>
+    <criterion id="13">met - no /api/plan request; requests were static assets, /api/routes, /api/routes/{id} x9, marker images, OSM tiles.</criterion>
+    <criterion id="14">met - banner hidden stayed true; banner code untouched in diff.</criterion>
+    <criterion id="15">met - no build step, no new files, no backend/docs changes in diff.</criterion>
+    <criterion id="16">met - pytest run for real: 233 passed, 1 warning (httpx/starlette deprecation). Tap behavior driven in headless Edge via Playwright.</criterion>
+  </criteria>
+  <test_results>
+    <result>python -c "import psycopg" with system Python 3.12 -> ModuleNotFoundError (cause of implementer's failure: host Python has no requirements installed; no venv existed)</result>
+    <result>venv in scratchpad + pip install -r requirements.txt playwright; python -m pytest -q (Postgres from running docker compose db on 127.0.0.1:5432) -> 233 passed, 1 warning in 33.75s</result>
+  </test_results>
+  <runtime_check result="yes">
+    Started uvicorn from the working copy on :8011 against the compose Postgres (health: ok, route_data loaded). Drove headless Edge (msedge.exe, Playwright, --headless=new) at 1300x800: two taps, third ignored, Reset, dot click placement/no double count, hover popup open/close, icon 200 from local origin, no /api/plan, Find route inert, repeated flows. Server stopped afterward.
+  </runtime_check>
+  <bugs></bugs>
+  <self_critique>
+    Not tested: rapid double-click zoom behavior, touch input, real-tile rendering visually (screenshot saved in scratchpad, not inspected), shared-stop dots overlapping from two routes, route-load-failure path with map taps, popup flicker on dots in other browsers (Chromium/Edge only; no flicker observed since hover popup was present after 400 ms). Hover used synthetic mouse moves in headless mode. Dots were identified by SVG path size heuristic (width under 14px).
+  </self_critique>
+</verification>

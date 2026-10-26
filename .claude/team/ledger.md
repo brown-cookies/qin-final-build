@@ -30,3 +30,9 @@ T008 | pipeline | verify iteration 1 (233 passed; browser checks pending owner) 
 T008 | pipeline | verify iteration 2 (re-run on Docker stack, no code change) | in_progress
 T008 | pipeline | verify iteration 2 (Docker stack, 233 passed, headless Chrome render) | passed
 T008 | pipeline | owner browser check (map, popup, colors, failure + empty banners) | done
+T009 | pipeline | plan (map taps, markers, reset) | in_progress
+T009 | pipeline | plan (spec written, 3 assumptions to confirm) | blocked_on_user
+T009 | pipeline | implement iteration 1 | in_progress
+T009 | pipeline | verify iteration 1 | in_progress
+T009 | pipeline | verify iteration 1 (verifier pass; owner browser check pending) | passed
+T009 | pipeline | owner browser check | done

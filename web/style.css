@@ -24,6 +24,12 @@ html, body {
   background: #fff;
 }
 
+#actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+}
+
 /* Above Leaflet's panes (z-index up to 800) and controls (1000). */
 #banner {
   position: absolute;
