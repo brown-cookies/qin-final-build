@@ -2,7 +2,7 @@ def test_root_serves_placeholder_page(client):
     r = client.get("/")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
-    assert "Hello world" in r.text
+    assert 'id="map"' in r.text
 
 
 def test_health_still_json(client):

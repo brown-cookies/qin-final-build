@@ -1,0 +1,36 @@
+<verification>
+  <iteration>2</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met (run) - built image contains web/ (docker compose exec api ls -R web: index.html, map.js, style.css, leaflet.js, leaflet.css, LICENSE, images/ with 5 PNGs). Self-hosted assets only; re-read from iteration 1, files unchanged per git status.</criterion>
+    <criterion id="2">met (run against container) - / 200 text/html, /map.js, /style.css, /leaflet.js, /leaflet.css 200, /images/layers.png, layers-2x.png, marker-icon.png 200 image/png, /api/routes 200 (9), /api/routes/yellow_out 200, /nope 404 {"error":"not_found","message":"Not Found"}. /health: database up, route_data loaded.</criterion>
+    <criterion id="3">met (read, unchanged since iteration 1)</criterion>
+    <criterion id="4">met (read in iter 1) + seen in screenshot: six distinct colors on lines, dots and legend.</criterion>
+    <criterion id="5">met (node harness in iter 1; NOT re-run, not observed in a browser network panel)</criterion>
+    <criterion id="6">met (run in headless Chrome) - screenshot shows lines laid over Angeles City streets, so lat/lng swap is correct.</criterion>
+    <criterion id="7">met (run, partly) - headless Chrome DOM has 375 leaflet-interactive elements (lines + dots); dots in route colors visible. Popup click NOT exercised.</criterion>
+    <criterion id="8">met (run in headless Chrome) - view fits all routes in the 960px map area.</criterion>
+    <criterion id="9">met (run) - legend with Yellow, Blue, Purple, Grey, Red, Dark yellow swatches in rendered DOM and screenshot.</criterion>
+    <criterion id="10">met (run) - OSM tiles loaded (25 tile-loaded nodes, map visible); attribution "Leaflet | (c) OpenStreetMap contributors" visible bottom right.</criterion>
+    <criterion id="11">met (iter 1 harness only; failure modes not re-run against browser)</criterion>
+    <criterion id="12">met (iter 1 harness only)</criterion>
+    <criterion id="13">met (run) - banner has hidden attribute in rendered DOM and is absent in screenshot on success.</criterion>
+    <criterion id="14">met (run) - empty 320px panel renders to the right of the map, blank; no media queries (read).</criterion>
+    <criterion id="15">met (read) - git status identical to iteration 1; no files outside web/, tests/api/test_static.py, ledger, T008 dir. No repo files modified by this pass.</criterion>
+    <criterion id="16">met (run) - full pytest 233 passed against compose Postgres.</criterion>
+  </criteria>
+  <test_results>
+    <result>docker compose up -d --build -> image built, db healthy, api started; /health ok</result>
+    <result>docker compose run --rm api python -m data.seed -> seeded 9 routes, 226 stops, 462 route_stop rows (only 30 m proximity warnings); docker compose restart api -> /health route_data loaded</result>
+    <result>curl checks listed in criterion 2 -> all as expected</result>
+    <result>pytest -q (scratchpad venv, default TEST_DATABASE_URL on compose Postgres 127.0.0.1:5432) -> 233 passed, 1 warning</result>
+    <result>Chrome headless (--screenshot, --dump-dom, 15 s virtual time) on http://localhost:8000/ -> map, 9 route lines, dots, legend, tiles, attribution rendered; screenshot at scratchpad/shots/home.png</result>
+  </test_results>
+  <runtime_check result="yes">
+    Real Docker stack (API :8000, Postgres 127.0.0.1:5432) and real headless Google Chrome (system install, via CLI flags, no playwright) loaded /. Stack is left running.
+  </runtime_check>
+  <bugs></bugs>
+  <self_critique>
+    Chrome was driven only via screenshot and DOM dump, so there was no interaction: popup click, failure and empty banners, and the real network-panel parallelism were not exercised in a browser (criteria 5, 7 popup, 11, 12 remain harness/read from iteration 1). Seed was run on a DB that already had data. Tiles need internet from this machine, which worked. Chrome screenshot window is 1280 wide, so narrow layouts are not checked (spec has no responsive requirement).
+  </self_critique>
+</verification>
