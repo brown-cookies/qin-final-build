@@ -1,0 +1,35 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="web/index.html">Added #prompt, #panel-message, #steps (ul), #summary under the buttons in the panel.</file>
+    <file path="web/style.css">Panel spacing styles for the new prompt, message, steps and summary elements.</file>
+    <file path="web/map.js">Find route plan call, error banners, steps and summary, route records, highlight and hide, locked state, Reset; drawRoute split into buildRecord/drawLine/drawStopDot and now takes the route object.</file>
+  </files>
+  <tests>
+    <test>node --check web/map.js: syntax OK. Nothing else executed; no browser run.</test>
+    <test>python -m pytest -q: did not run. ImportError in tests/conftest.py, No module named 'psycopg' (not installed in this environment). Front-end only change, so no backend tests are affected.</test>
+  </tests>
+  <commands_run>
+    <command>node --check web/map.js</command>
+    <command>python -m pytest -q</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Repeated end stop of a circular route is projected with "prefer last tie" (1e-3 projected m) so it lands at line end; rejected plain nearest, which would put first and last stop at the same line position and break seam rides.</decision>
+    <decision>Shortest-stretch pair uses absolute along-line distance between projected stop positions, then rejects the pair if dest index is below origin index (wraparound). Rejected preferring forward pairs, since that would hide wraparound detection.</decision>
+    <decision>Projection uses map.options.crs (EPSG3857) with L.LineUtil.closestPointOnSegment (Leaflet 1.9.4 vendored); rejected layer-point projection because it depends on zoom.</decision>
+    <decision>Timed banner uses its own timer/flag so persistent load banners are never cleared; rejected reusing one showBanner.</decision>
+    <decision>Highlight lines drawn first, then board/alight dots re-added so dots sit on top.</decision>
+    <decision>Prompt is hidden when 2 points are set (not specified by owner); shown only when locked is false and fewer than 2 points.</decision>
+    <decision>Error code lookup uses Object.hasOwn so unknown codes fall to the internal_error text.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <conflicts>
+    - spec.xml criterion 8 says "(wording pending clarification 5)" and "stops_passed stops"; answers.md A overrides (transfer "(walk n m)" form). Followed answers.md.
+    - answers.md C says the 5s clear applies to plan banners; spec.xml said Reset clears banner generally. Followed answers.md: load-time banners are persistent.
+    - answers.md D says "existing fitBounds padding"; the existing fitBounds call has no padding option, so default is used.
+    - If a timed banner is shown while a load-time banner is up, it replaces the text and is later hidden (load message not restored). Unlikely (routes would be absent) but not handled.
+  </conflicts>
+  <self_critique>
+    Least covered: pair selection on circular routes (seam handling depends on the end stop coordinate equaling the start stop and on the prefer-last heuristic), and the literal "shortest absolute stretch" rule, which could pick a wraparound pair over a valid seam pair and show "No match found" for a real ride. Nothing was exercised in a browser.
+  </self_critique>
+</implementation>

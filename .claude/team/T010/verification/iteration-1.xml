@@ -1,0 +1,61 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>fail</verdict>
+  <criteria>
+    <criterion id="1">met - jsdom run against live API: one GET /api/plan?from_lat=15.1601114&amp;from_lng=120.608233&amp;to_lat=15.1481501&amp;to_lng=120.6010236 (origin first), no bbox check.</criterion>
+    <criterion id="2">met - zero and one point: banner "Incomplete origin and destination selection.", 0 requests; gone after 5.2 s.</criterion>
+    <criterion id="3">met - pending: panel "Finding route…", Find and Reset disabled, prompt hidden, setPoint ignored (points stayed 2).</criterion>
+    <criterion id="4">met - disabled after success; enabled after each error and after No match found; retry re-fetched with same points.</criterion>
+    <criterion id="5">met - all 7 texts exact (stubbed responses and a network rejection); route_not_found, database_unavailable, unknown code, non-JSON body map per answers.md; cleared on next Find, Reset, and after 5 s (checked at 3 s still shown).</criterion>
+    <criterion id="6">met - after every error all 9 lines and all dots on map.</criterion>
+    <criterion id="7">met by DOM order in index.html (buttons, prompt, message, steps, summary); not visually checked.</criterion>
+    <criterion id="8">met - texts observed incl. "Transfer to Blue at Ocampo's Appliances (walk 29 m)", no walk suffix when walk_m 0, "Dark yellow" label, no direction.</criterion>
+    <criterion id="9">met - ride li style.background rgba(r,g,b,0.5) of route hex. Readability not assessed (no rendering).</criterion>
+    <criterion id="10">met - API summary under steps.</criterion>
+    <criterion id="11">met - routeRecords built from the existing load fetches; no added requests in code.</criterion>
+    <criterion id="12">not met - exact-name shortest-stretch rule picks the wrong stop occurrence on routes that reuse the same road (see bugs 1 and 2).</criterion>
+    <criterion id="13">met for non-duplicate names (weight 8, route color, correct stretch); not met for duplicate names (bug 2).</criterion>
+    <criterion id="14">met for matched trips - only board/alight dots (2 per ride) remain, tap markers untouched, legend 6 items.</criterion>
+    <criterion id="15">met mechanically (any null ride shows "No match found", nothing hidden, disappears after 5 s, steps and summary stay, retry re-fetches) but fires on valid rides (bug 1).</criterion>
+    <criterion id="16">met - map bounds contain highlight bounds (jsdom with fixed 800x600 size; not real tiles).</criterion>
+    <criterion id="17">met - reset after success and after No match found restores 9/9 lines and all dots, clears steps, summary, message, banner, prompt back to origin, Find enabled.</criterion>
+    <criterion id="18">met - diff touches only web/index.html, web/map.js, web/style.css (plus .claude/team files).</criterion>
+  </criteria>
+  <test_results>
+    <result>docker compose up -d --build; python -m data.seed -> seeded 9 routes, 226 stops, 462 route_stop rows; /health ok, route_data loaded</result>
+    <result>docker compose run api python -m pytest (tests mounted, TEST_DATABASE_URL to db container) -> 233 passed, 1 warning</result>
+    <result>node --check web/map.js -> OK</result>
+    <result>jsdom harness vs live API, 200 random trips: 123 had rides; 71 highlighted, 52 "No match found"; 77 walk-only</result>
+    <result>unique ride steps from 400 random trips: 297 rides; 203 matched correctly; 76 false "no match" (valid forward ride exists by stops_passed); 13 matched to a different pair than the API ride; 5 genuine wraparound</result>
+  </test_results>
+  <runtime_check result="yes">
+    Ran the real stack (Docker) and the real web/map.js + vendored Leaflet in jsdom (800x600 stubbed layout) against the live API, calling setPoint and clicking the real buttons. A real browser could not be launched: Edge headless exits silently under the sandbox, and I did not bypass the sandbox. Not exercised: real rendering, tile load, visual tint, colors, actual map clicks, real fitBounds animation. Stubbed fetch for non-producible errors.
+  </runtime_check>
+  <bugs>
+    <bug>
+      <description>False "No match found" on valid rides: when a stop name occurs twice on a record and both occurrences project to the same line position (grey_out/purple_out reuse the same road), all pair gaps tie and the first pair wins; if that pair has dest index below origin it is rejected as wraparound. About 25% of unique rides from random trips (76 of 297) are affected; almost all grey and purple. Wraparound check uses the tied pair instead of any valid forward pair.</description>
+      <reproduction>Docker stack seeded. Origin 15.1481501,120.6010236 is not needed; use the stops: GET /api/plan from (Ocampo's Appliances) to (Addessa) -> ride grey_out "Ocampo's Appliances" to "Addessa" (6 stops). On grey_out, Ocampo's is index 50, Addessa occurs at 41 and 56 with identical line position; matchRide picks (50,41) and returns null. Full-UI repro: from 15.1518763,120.5914184 to 15.1659488,120.5900854 (grey, Aero Metal Force Trading to The Court Yard, 18 stops; valid pair 67->85, picked 30->11) shows "No match found" and everything stays visible.</reproduction>
+      <severity>high</severity>
+      <owner>planner</owner>
+    </bug>
+    <bug>
+      <description>Wrong stretch highlighted when the shortest-line-gap pair differs from the ridden pair (duplicate names with different line positions). Highlight is drawn for the shortest-gap pair, not the stops actually ridden.</description>
+      <reproduction>grey_out ride "Better Living Tile and Bath Center" to "Diamond Home Plaza" (API: 11 stops; valid indexes 31->42). Matcher chose 31->55 (24 stops) because its line gap is shorter than 31 to 42's wrap. 13 such mismatches among 297 unique rides (some are visually identical because positions coincide; this one is not).</reproduction>
+      <severity>medium</severity>
+      <owner>planner</owner>
+    </bug>
+    <bug>
+      <description>A timed banner shown while a persistent load-error banner is up overwrites it and later hides it; the load message is not restored. Reachable when route load failed (no records), user taps two points and presses Find route.</description>
+      <reproduction>Call showBanner(load message), set two points, make /api/plan return 500 internal_error, click Find route: banner shows the plan text, and after 5 s the banner is hidden and the load message is gone.</reproduction>
+      <severity>low</severity>
+      <owner>implementer</owner>
+    </bug>
+  </bugs>
+  <notes>
+    Bugs 1 and 2 follow the owner rule literally (spec 10 and answers C: shortest stretch, wraparound if dest index lower), so the rule itself needs an owner decision (for example, prefer a pair whose index distance equals stops_passed). Seam handling: the seeded circular routes (yellow, purple, grey) have no repeated end stop (first and last names differ), so the seam path in the code is never exercised by the data; a ride past the last stop is treated as wraparound and shows No match found (5 such rides observed, which is correct per answers.md).
+    Also: pytest.ini in the repo is a directory (odd), pytest still ran. Docker containers left running.
+  </notes>
+  <self_critique>
+    No real browser: no visual check of tint, highlight weight, fit, panel layout, banner placement over the map, or real tap handling; jsdom layout is faked. Stubbed fetch was used for error statuses. Rides counted "valid" assume stops_passed equals index difference, which holds for the API as observed but is my inference. Random sampling, not exhaustive.
+  </self_critique>
+</verification>

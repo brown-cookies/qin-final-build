@@ -30,6 +30,22 @@ html, body {
   padding: 12px;
 }
 
+#prompt, #panel-message, #summary {
+  margin: 0;
+  padding: 0 12px 12px;
+}
+
+#steps {
+  margin: 0;
+  padding: 0 12px 12px;
+  list-style: none;
+}
+
+#steps li {
+  padding: 4px 6px;
+  margin-bottom: 4px;
+}
+
 /* Above Leaflet's panes (z-index up to 800) and controls (1000). */
 #banner {
   position: absolute;
