@@ -24,6 +24,8 @@ def test_unhandled_exception_500_does_not_leak(client, caplog):
     def boom():
         raise RuntimeError(secret)
 
+    # The "/" static mount is a catch-all, so a route added now must go ahead of it.
+    app.router.routes.insert(0, app.router.routes.pop())
     try:
         r = client.get("/_boom")
     finally:

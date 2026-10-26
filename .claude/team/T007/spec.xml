@@ -1,0 +1,12 @@
+<spec task="T007">
+  <source>Owner-decided spec, verbatim from the /master-orchestrator request (planner skipped).</source>
+  <criteria>
+    <c id="1">app/main.py mounts StaticFiles(directory=Path(__file__).parent.parent / "web", html=True) at "/" AFTER the four app.include_router calls (last statement).</c>
+    <c id="2">No new env var, no new handler, no HTML 404 page; unknown paths return 404 {"error":"not_found","message":...} via the existing StarletteHTTPException handler.</c>
+    <c id="3">web/index.html: minimal "Hello world" placeholder. web/.gitkeep kept.</c>
+    <c id="4">One new module in tests/api/ (use the existing `client` fixture style) asserting: GET / 200 HTML with placeholder text; GET /health JSON still returned; GET /docs 200; GET /api/routes responds; unknown path 404 with error=not_found shape.</c>
+    <c id="5">No other changes: no refactors, Dockerfile, or docs edits. Do not commit.</c>
+  </criteria>
+  <verify>Run pytest (needs Postgres test DB) and report real output; also run the app and curl /, /health, /docs, /api/routes, /nope if feasible.</verify>
+</spec>
+<!-- Iteration 2 (owner decision): existing tests/api/test_errors.py::test_unhandled_exception_500_does_not_leak must insert its temporary /_boom route BEFORE the "/" static mount so it returns 500, not 404. Edit is limited to that test. Verifier iteration 1 bug is the source. -->

@@ -1,0 +1,15 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="app/main.py">imports Path and StaticFiles; mounts web/ at "/" (html=True) as last statement after the four include_router calls</file>
+    <file path="web/index.html">minimal Hello world placeholder (web/.gitkeep untouched)</file>
+    <file path="tests/api/test_static.py">5 tests: / html, /health json, /docs, /api/routes json, /nope 404 not_found shape</file>
+  </files>
+  <tests><test>Not run: psycopg not installed in this environment (conftest import fails). Verifier must run pytest.</test></tests>
+  <commands_run><command>python -m pytest tests/api -q (ImportError: psycopg)</command></commands_run>
+  <design_decisions>
+    <decision>test_api_routes accepts 200 or 503 (spec says "responds"), asserting JSON content type, rather than requiring seeded data.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>Untested. Risk: StaticFiles 404 raises Starlette HTTPException and should hit the existing handler; unverified. Also POST to unknown path under the mount may yield 405 instead of 404 (not specified).</self_critique>
+</implementation>
