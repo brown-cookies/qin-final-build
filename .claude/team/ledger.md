@@ -36,3 +36,9 @@ T009 | pipeline | implement iteration 1 | in_progress
 T009 | pipeline | verify iteration 1 | in_progress
 T009 | pipeline | verify iteration 1 (verifier pass; owner browser check pending) | passed
 T009 | pipeline | owner browser check | done
+T010 | pipeline | plan (plan call, steps, highlight, errors) | in_progress
+T010 | pipeline | plan (14 clarifications) | blocked_on_user
+T010 | pipeline | implement iteration 1 | in_progress
+T010 | pipeline | implement iteration 1 (unrun in browser; pytest env missing psycopg) | done
+T010 | pipeline | verify iteration 1 | in_progress
+T010 | pipeline | verify iteration 1 (fail: matching rule defect needs owner decision; pytest 233 passed) | blocked_on_user

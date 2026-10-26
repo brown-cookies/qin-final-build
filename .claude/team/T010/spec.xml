@@ -1,0 +1,50 @@
+<spec>
+  <user_stories>
+    - As a rider who has tapped an origin and destination, I press Find route and see step-by-step directions and a summary in the panel.
+    - As a rider, I see only the rides of my trip highlighted on the map, with other lines hidden, so the trip is easy to read.
+    - As a rider, I see a plain-language banner when the plan fails and can retry without Reset.
+    - As a rider, I press Reset and get the full map and a clean panel back.
+  </user_stories>
+  <acceptance_criteria>
+    1. Find route with 2 tapped points sends exactly one GET /api/plan with from_lat, from_lng, to_lat, to_lng (origin first) and no browser-side bbox check. Pass: one request observed with those four params.
+    2. Find route with fewer than 2 points shows banner "Incomplete origin and destination selection." and sends no request.
+    3. While pending: panel shows "Finding route…"; Find route and Reset are disabled; map taps and stop-dot taps do not add points.
+    4. After success Find route stays disabled until Reset. After a plan error or "No match found" Find route is enabled again and reuses the same two points.
+    5. Banner texts by error code: invalid_location "That location is outside the service area."; no_stop_nearby "No stops nearby."; no_route "No route found."; validation_error "The request wasn't valid. Please try again."; route_data_unavailable "No available routes."; internal_error "Something went wrong. Please try again."; fetch rejection "Network failure. Refresh the page and try again." The banner clears on Reset, on the next Find route, and 5 seconds after showing.
+    6. After any error all route lines and dots remain visible.
+    7. Panel order top to bottom: buttons, steps list, summary.
+    8. Steps list is one line per step: walk "Walk {distance_m} m to {to}"; ride "Ride {Color label} from {from} to {to} ({stops_passed} stops, {km} km)" with "1 stop" when 1; transfer "Transfer to {to_color label} at {from}" with walk_m appended in meters only when walk_m &gt; 0 (exact wording pending clarification 5). Labels from COLORS (Yellow, Blue, Purple, Grey, Red, Dark yellow); direction never shown; "Your start point"/"Your destination" shown as returned.
+    9. Ride step lines have a background tint of the route color hex at alpha 0.50; text color inherited.
+    10. The API summary string is shown under the steps.
+    11. On page load, one global list is built from the already-fetched /api/routes and /api/routes/{id} data: per route record, line coordinates and each stop's name and position in order. No added requests.
+    12. For each ride step the route record is found by color and direction; step from/to are matched to stop names by exact string equality; if a name occurs more than once on the record, the pair with the shortest line stretch between them is used.
+    13. The highlighted portion runs between the line points nearest each of the two stops, drawn thicker in the route color.
+    14. All other lines are hidden. Only board and alight stop dots of each ride remain. Tap markers stay. Legend still shows all six.
+    15. If any ride is a wraparound (destination before origin in stop order) or cannot be matched, the panel shows "No match found" and nothing is hidden.
+    16. When a highlight is drawn, the map fits to the highlighted segments.
+    17. Reset restores all lines and dots, clears steps, summary, highlight, panel message and banner, returns to "pick origin", and re-enables Find route.
+    18. Changes limited to web/index.html, web/map.js, web/style.css. pytest output is reported as run; browser behavior is left to the owner's Verify list (including yellow/darkyellow tint readability).
+  </acceptance_criteria>
+  <assumptions>
+    - Only the owner-specified behavior; no other decisions made. Everything undecided is in the clarifications returned to the owner.
+  </assumptions>
+  <edge_cases>
+    - Reset during no pending request only (Reset is disabled while pending).
+    - Plan with zero ride steps (walk only): no highlight to draw; behavior pending clarification 9.
+    - Circular routes (yellow, purple, grey) list a shared stop twice (first and last).
+    - Same stop name appearing in multiple route records; match is per record only.
+    - Rapid double click on Find route.
+  </edge_cases>
+  <risks>
+    <risk severity="medium">The 5 second banner timer shares the single #banner element.</risk>
+    <risk severity="medium">Matching by exact stop name and nearest-point slicing can misplace the highlight on loops or near-overlapping segments.</risk>
+    <risk severity="low">Tint at alpha 0.50 on yellow (#FACC15) with inherited dark text is fine, but darkyellow may be low contrast.</risk>
+  </risks>
+  <dependencies>
+    - GET /api/plan, /api/routes, /api/routes/{id} (existing). Leaflet vendored in web/.
+    - Existing web/map.js handlers: setPoint, resetPoints, drawRoute, load, showBanner.
+  </dependencies>
+  <self_critique>
+    Every story maps to criteria. Criteria 8, 15, 17 depend on unresolved owner answers (clarifications 5, 9, 3). Biggest risk: the unstated panel/state model (no "pick origin" prompt or lock state exists in code).
+  </self_critique>
+</spec>
