@@ -1,0 +1,36 @@
+<verification>
+  <iteration>1</iteration>
+  <verdict>pass</verdict>
+  <criteria>
+    <criterion id="1">met (read + run) - web/ has index.html, map.js, style.css, leaflet.js (header: Leaflet 1.9.4), leaflet.css, LICENSE, images/ (layers.png, layers-2x.png, marker-icon.png, marker-icon-2x.png, marker-shadow.png). leaflet.css url() refs: images/layers.png, images/layers-2x.png, images/marker-icon.png resolve; each returned 200 over HTTP. index.html references only /leaflet.css, /style.css, /leaflet.js, /map.js. grep for http(s):// in index.html, map.js, style.css finds only the OSM tile URL and the openstreetmap.org/copyright link, both in map.js.</criterion>
+    <criterion id="2">met (run) - uvicorn from working tree on :8765: / 200 text/html, /map.js 200, /style.css 200, /leaflet.js 200, /leaflet.css 200, /images/layers.png 200, /images/layers-2x.png 200, /images/marker-icon.png 200, /api/routes 200 JSON (9 routes, seeded), /api/routes/yellow_out 200, /nope 404 {"error":"not_found","message":"Not Found"}.</criterion>
+    <criterion id="3">met (read) - no package.json, no bundler files; git status shows only web/ additions.</criterion>
+    <criterion id="4">met (read + grep) - each of the six hex values appears exactly once in web/map.js (COLORS); none in style.css or index.html. Line color, dot fillColor and legend swatch all read COLORS[...].hex. Note: dot outline "#222" is a literal in map.js, not a route color.</criterion>
+    <criterion id="5">met (run in node harness, stubbed Leaflet/DOM, real API data) - 1 request to /api/routes then 9 detail requests, max 9 in flight simultaneously. Code uses Promise.all. Not observed in a real browser network panel.</criterion>
+    <criterion id="6">met (read + harness) - toLatLng swaps [lng,lat] to [lat,lng]; first polyline vertex observed [15.162111, 120.608039], which is in Angeles City. Same style for out/back (color from route color). Not visually checked.</criterion>
+    <criterion id="7">met (read + harness) - circleMarker in route color with bindPopup(name) only, no other handlers; dedupe by name per route via a Set (harness drew 366 dots for 462 route_stop rows; circular routes deduped). Not clicked in a real browser.</criterion>
+    <criterion id="8">met (read + harness) - map.fitBounds(featureGroup(lines).getBounds()) called once on success, never on failure/empty. Visual fit not observed.</criterion>
+    <criterion id="9">met (read + harness) - legend has six entries: Yellow, Blue, Purple, Grey, Red, Dark yellow, swatch background from COLORS. Rendered also in empty/failure modes.</criterion>
+    <criterion id="10">met (read + harness) - OSM tile URL https://tile.openstreetmap.org/{z}/{x}/{y}.png; attribution option is a link to openstreetmap.org/copyright with text "(c) OpenStreetMap contributors". Not seen rendered in a browser.</criterion>
+    <criterion id="11">met (harness) - /api/routes 500, one detail 404, and one detail network error each give exactly: We couldn't load the jeepney routes. Check your connection and refresh the page. with 0 lines, 0 dots, 0 fitBounds. Drawing happens only after Promise.all resolves.</criterion>
+    <criterion id="12">met (harness) - /api/routes [] gives banner exactly "No route data is available.", only 1 request made, 0 lines drawn.</criterion>
+    <criterion id="13">met (harness) - success mode: banner stays hidden (hidden attribute never cleared). index.html has the banner with the hidden attribute.</criterion>
+    <criterion id="14">met (read) - &lt;aside id="panel"&gt;&lt;/aside&gt; empty, no children, no text; no code in map.js references it; style.css gives it width 320px and a left border beside the map; no @media in index.html, style.css or map.js (grep).</criterion>
+    <criterion id="15">met - git diff HEAD --name-only: .claude/team/ledger.md, tests/api/test_static.py, web/index.html. Untracked: .claude/team/T008/, web/LICENSE, web/images/, web/leaflet.css, web/leaflet.js, web/map.js, web/style.css. Nothing under app/, sql/, data/, docs, SPEC.md, README.md. test_static.py diff is one line: "Hello world" in r.text replaced by 'id="map"' in r.text.</criterion>
+    <criterion id="16">met (run) - full pytest 233 passed. Visual criteria 5-14 were NOT verified in a real browser (see runtime_check).</criterion>
+  </criteria>
+  <test_results>
+    <result>pytest -q (venv in scratchpad, Postgres 18 temp cluster on 127.0.0.1:5432, UTF8 test DB) -> 233 passed, 1 warning (starlette httpx deprecation)</result>
+    <result>pytest -q first run, test DB created with Windows default encoding WIN1252 -> 232 passed, 1 failed: tests/api/test_reports.py::test_multibyte_and_sql_metacharacters_roundtrip (UnicodeEncodeError cp1252). Environment artifact of my cluster encoding, unrelated to T008; passes once the DB is UTF8.</result>
+    <result>python -m data.seed against local DB -> seeded 9 routes, 226 stops, 462 route_stop rows</result>
+    <result>curl checks listed under criterion 2 -> all as expected</result>
+    <result>node harness (scratchpad h.js, map.js executed in vm with stub L and DOM, fetch routed to the live API) modes ok/empty/failroutes/faildetail/neterr -> behavior as in criteria 5-13</result>
+  </test_results>
+  <runtime_check result="yes">
+    Docker was not running. Docker Desktop engine unavailable and the Windows postgres service could not be started (no admin rights), so I initialised a throwaway Postgres 18 cluster in the scratchpad dir (initdb, port 5432), seeded the biyahe DB, ran pytest, and ran uvicorn from the working tree on :8765. HTTP checks were real. No real browser or headless browser tool was available. Front-end behavior (banners, parallel fetches, draw/no-draw, dedupe, coordinate swap, legend text) was exercised only through a node harness with stubbed Leaflet and DOM against live API responses. Visual rendering (colors on map, legend look, banner overlay position and z-order, popups on click, attribution appearance, panel layout, fit of the view, tiles loading) was NOT run and is not claimed verified; the owner must check these in a browser.
+  </runtime_check>
+  <bugs></bugs>
+  <self_critique>
+    Not tested: real Leaflet rendering, browser CSS layout, popup click, tile loading, real network-panel parallelism. The stubbed harness trusts that Leaflet calls behave per their API. Test DB encoding issue was an artifact of my local cluster. Postgres version 18 here versus 16 in the project's Compose. The vendored leaflet.js was checked only by its header comment, not by hash against the official release. Local temp cluster and uvicorn were started by me and need stopping (cleanup attempted in the final step).
+  </self_critique>
+</verification>

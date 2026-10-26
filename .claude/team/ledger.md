@@ -22,3 +22,11 @@ T007 | pipeline | verify iteration 1 (1 existing test broken by mount-last; spec
 T007 | pipeline | implement iteration 2 (fix /_boom test ordering) | in_progress
 T007 | pipeline | verify iteration 2 | in_progress
 T007 | pipeline | verify iteration 2 (233 passed, verifier pass) | passed
+T008 | pipeline | plan (map page with route lines) | in_progress
+T008 | pipeline | plan (5 clarifications) | blocked_on_user
+T008 | pipeline | implement iteration 1 | in_progress
+T008 | pipeline | verify iteration 1 | in_progress
+T008 | pipeline | verify iteration 1 (233 passed; browser checks pending owner) | passed
+T008 | pipeline | verify iteration 2 (re-run on Docker stack, no code change) | in_progress
+T008 | pipeline | verify iteration 2 (Docker stack, 233 passed, headless Chrome render) | passed
+T008 | pipeline | owner browser check (map, popup, colors, failure + empty banners) | done

@@ -1,0 +1,30 @@
+<implementation>
+  <iteration>1</iteration>
+  <files>
+    <file path="web/index.html">replaced placeholder: map div, banner, legend, empty aside#panel, local leaflet/style/map includes</file>
+    <file path="web/map.js">COLORS defined once; fetch /api/routes then all details via Promise.all; draw only after all succeed; banners; legend; dedupe stops by name per route; fitBounds on lines</file>
+    <file path="web/style.css">flex layout, banner and legend overlays, fixed-width panel; no route colors, no media queries</file>
+    <file path="web/leaflet.js">vendored Leaflet 1.9.4 dist/leaflet.js</file>
+    <file path="web/leaflet.css">vendored Leaflet 1.9.4 dist/leaflet.css</file>
+    <file path="web/images/*.png">vendored Leaflet 1.9.4 dist/images (5 files), at the images/ path leaflet.css expects</file>
+    <file path="web/LICENSE">Leaflet BSD-2 licence</file>
+    <file path="tests/api/test_static.py">one assertion: "Hello world" replaced by 'id="map"' in r.text</file>
+  </files>
+  <tests>
+    <test>Full pytest: 34 passed, 199 errors; all errors are psycopg connection errors (no Postgres reachable on 127.0.0.1:5432), not from this change. test_static.py could not be run for the same reason.</test>
+  </tests>
+  <commands_run>
+    <command>npm pack leaflet@1.9.4 in a new scratchpad dir; tar xzf; cp of dist/leaflet.js, dist/leaflet.css, dist/images/*, LICENSE. Tarball sha256 84c65a256e50657896f54c33bd857b6849ebe94c817803be818bf32a3dde0b77; npm integrity sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==</command>
+    <command>venv python -m pytest -q (see tests)</command>
+  </commands_run>
+  <design_decisions>
+    <decision>Absolute asset URLs (/leaflet.js) since the page is served at /; rejected relative paths.</decision>
+    <decision>Stop dots use a fixed dark outline "#222" in map.js with route-colored fill; rejected a style.css rule so style.css holds no color tied to routes.</decision>
+    <decision>Marker images copied to web/images/ (leaflet.css expects images/ next to it); LICENSE kept as web/LICENSE.</decision>
+    <decision>Initial setView on Angeles City, replaced by fitBounds on success; rejected leaving map unset so banner cases still show a map.</decision>
+  </design_decisions>
+  <blocked_reason>none</blocked_reason>
+  <self_critique>
+    Browser behavior (criteria 5-14) is unverified, and pytest could not run against a DB, so the edited static test is unexecuted. leaflet.js carries a sourceMappingURL comment to a map file not vendored (devtools-only 404).
+  </self_critique>
+</implementation>

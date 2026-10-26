@@ -1,0 +1,76 @@
+<spec>
+  <findings>
+    (a) Response shapes match the request. GET /api/routes returns [{route_id, color, direction, name, stop_count}] (app/schemas.py RouteListItem; SPEC 6.4). color is the lowercase token (yellow, blue, purple, grey, red, darkyellow), not a display label. Detail returns {type: FeatureCollection, features: [...]}: feature 0 is a LineString (coordinates [lng, lat], properties route_id, color, direction); then one Point per route_stop row in seq order (properties name, seq; coordinates [lng, lat]). Points do NOT carry stop_id or color. Detail 404 is {"error":"route_not_found","message":...}; the request treats any failure the same (one banner), so the error shape does not matter to the front end. /api/routes returns [] (200) when route data is empty (SPEC 12).
+    (b) SPEC fixes no hex values except as examples: "#FACC15 and #B8860B" for yellow and darkyellow (SPEC 7). The request's yellow and darkyellow match those. The other four (#0052B4, #6A1B9A, #757575, #D32F2F) are unconstrained by SPEC. No conflict. SPEC requires colors defined once in web/map.js: consistent with request item 3.
+    (c) Conflict: tests/api/test_static.py::test_root_serves_placeholder_page asserts "Hello world" in GET / text. Replacing web/index.html will fail it unless the page keeps that text or the test is edited. Other tests in that file (health, docs, /api/routes not shadowed, unknown path error shape) are unaffected. Not decided here; see clarification 1.
+    (d) SPEC has no statement on Leaflet vendoring, licence file, or attribution wording beyond NFR-4 ("The page and README credit '(c) OpenStreetMap contributors'") and "No build step" (SPEC 3). SPEC Layout lists web/ as index.html, map.js, style.css; vendored files are additions, not a conflict. Static serving from web/ at / already exists (StaticFiles html=True), so vendored files are reachable at /leaflet.js etc. with no backend change. NFR-4 also requires the README credit, which the request's "no docs edits" excludes (clarification 4).
+  </findings>
+
+  <clarifications>
+    <q n="1">Existing test tests/api/test_static.py::test_root_serves_placeholder_page asserts "Hello world" in GET /. The new page will not contain it. Options: (A) update/replace that one assertion in the test (e.g. assert the response is HTML containing the map container id), or (B) keep a hidden/visible "Hello world" in index.html. Recommended default: A, a minimal edit of that single test, since B pollutes the real page to satisfy a placeholder check. The request says "no backend changes"; a test edit is not backend, but needs owner OK because the request says "exactly this and nothing else".</q>
+    <q n="2">Circular routes (yellow_out, purple_out, grey_out) pass the same real place twice, so the detail response contains two Point features with the same name and different seq. Request item 6 says "shared stop drawn once per route". Should a stop appearing twice on one route be drawn as one dot (dedupe by name within the route) or as two dots at identical coordinates? Recommended default: dedupe by name within a route (one dot per distinct stop name per route). Note the Points have no stop_id, so name is the only key.</q>
+    <q n="3">If /api/routes returns a color token not among the six (cannot happen with the fixed registry, but the front end gets no guarantee), what should be drawn? Recommended default: treat as a load failure is overkill; skip no routes and draw that route in a neutral fallback is a new decision, so default is: not handled (registry is fixed and validated by validate.py).</q>
+    <q n="4">NFR-4 and CLAUDE.md require the README to credit "(c) OpenStreetMap contributors" and DECISIONS.md to have an entry per SPEC Section 3 tool (Leaflet is one); the request forbids docs edits. Recommended default: out of scope for T008, tracked as a later docs slice; this task adds attribution on the page only.</q>
+    <q n="5">Attribution text: request says show "(c) OpenStreetMap contributors". Leaflet's built-in attribution control would normally render it with a copyright symbol and a link to openstreetmap.org/copyright. Recommended default: render the literal text "(c) OpenStreetMap contributors" via the tile layer attribution (plain, with link to https://www.openstreetmap.org/copyright allowed), and keep Leaflet's own "Leaflet" prefix as is.</q>
+  </clarifications>
+
+  <user_stories>
+    <story>As a rider, I open the page and see a map of Angeles City with all six jeepney routes drawn in distinct colors.</story>
+    <story>As a rider, I see a legend that tells me which color is which route.</story>
+    <story>As a rider, I can click a stop dot to see its name.</story>
+    <story>As a rider, if routes cannot load or none exist, I see a clear message over the map instead of a blank or partial map.</story>
+    <story>As a maintainer, the OSM credit is visible and no third-party service is called at runtime except OSM tiles.</story>
+  </user_stories>
+
+  <acceptance_criteria>
+    <c n="1">web/ contains index.html, map.js, style.css, and vendored Leaflet 1.9.4: leaflet.js, leaflet.css, marker images (in the path leaflet.css expects), and the Leaflet BSD-2 licence file. Pass: files exist; index.html references only local files for scripts/styles (no CDN or other third-party URL besides OSM tile requests made by Leaflet).</c>
+    <c n="2">GET / returns the page; GET of each vendored file path linked from index.html returns 200 (can be checked by pytest/curl against the static mount).</c>
+    <c n="3">No build step: page works by serving web/ as-is; no package.json build, no bundler files added.</c>
+    <c n="4">Colors are defined exactly once, in map.js, as yellow #FACC15, blue #0052B4, purple #6A1B9A, grey #757575, red #D32F2F, darkyellow #B8860B; line styling, stop dots and legend swatches all read from that single definition (grep: each hex appears once in web/ excluding vendored Leaflet; style.css contains none of them).</c>
+    <c n="5">On load the page requests GET /api/routes, then GET /api/routes/{route_id} for every route_id returned, issued in parallel (browser network panel shows 9 detail requests overlapping).</c>
+    <c n="6">Each LineString is drawn with its color group's color; out and back of the same color have identical color and style. GeoJSON [lng, lat] is converted so lines land in Angeles City (about lat 15.1-15.2, lng 120.5-120.7), not off the coast of Somalia.</c>
+    <c n="7">Each stop is a small dot in its route's color (or clearly styled dot), drawn once per route per clarification 2; clicking a dot shows its name; dots do nothing else (no selection, no plan call, no highlight state).</c>
+    <c n="8">After successful load the map view is fitted to the bounds of all loaded lines.</c>
+    <c n="9">A legend lists exactly six entries with labels Yellow, Blue, Purple, Grey, Red, Dark yellow, each with its swatch color.</c>
+    <c n="10">OSM tiles are used and the text "(c) OpenStreetMap contributors" is visible on the page (NFR-4).</c>
+    <c n="11">Failure: if /api/routes or any one detail request fails (network error or non-2xx), no route lines or stop dots are drawn and a banner over the map shows exactly: We couldn't load the jeepney routes. Check your connection and refresh the page.</c>
+    <c n="12">Empty data: if /api/routes returns [], a banner over the map shows exactly: No route data is available. No detail requests are made and no lines are drawn.</c>
+    <c n="13">On success, no banner is visible.</c>
+    <c n="14">Index contains one empty, visible container (e.g. aside id="panel") with no children, no text, no scripts attached to it; laid out beside/over the map for desktop only; no media queries or responsive CSS.</c>
+    <c n="15">No changes to app/, sql/, data/, tests other than as resolved in clarification 1, SPEC.md, README.md, or docs/.</c>
+    <c n="16">Existing pytest suite passes (with the clarification 1 resolution applied); visual criteria 5-14 are verified by the owner in a browser, not pytest.</c>
+  </acceptance_criteria>
+
+  <assumptions>
+    <a>Relative URLs (/api/...) are used since the page is served by the same FastAPI app at /.</a>
+    <a>Route display labels (Yellow ... Dark yellow) map from the color token in map.js; the route name field from /api/routes is not shown in this slice.</a>
+    <a>Legend and banner live in index.html/style.css/map.js, not backend.</a>
+    <a>Banner for failure replaces any partial drawing: draw only after all 9 details succeed.</a>
+  </assumptions>
+
+  <edge_cases>
+    <e>One of nine detail requests fails: nothing drawn, failure banner.</e>
+    <e>/api/routes returns [] (SPEC 12 unseeded start): empty banner, no legend requirement change (legend may still show six entries; see risks).</e>
+    <e>Circular route with duplicate stop name (clarification 2).</e>
+    <e>Out and back overlap on the same road: both drawn; same style.</e>
+    <e>/api/routes returns 500 or non-JSON: treated as failure.</e>
+    <e>Tiles fail to load (offline): routes still draw; no banner required.</e>
+  </edge_cases>
+
+  <risks>
+    <risk severity="medium">Existing test fails on "Hello world" unless resolved (clarification 1).</risk>
+    <risk severity="low">Leaflet default marker images path: leaflet.css expects images/ relative to itself; wrong placement yields 404s for icons (only matters if markers used; dots are circle markers).</risk>
+    <risk severity="low">Legend shown while empty-data banner is up is unspecified; request is silent. Default: legend still renders; not tested.</risk>
+    <risk severity="low">Fitting bounds on lines only; stops outside lines are ignored per request.</risk>
+  </risks>
+
+  <dependencies>
+    <d>Leaflet 1.9.4 (npm package or official release), BSD-2 licensed, vendored.</d>
+    <d>Existing GET /api/routes and GET /api/routes/{route_id}; StaticFiles mount of web/ at / in app/main.py.</d>
+    <d>OSM tile servers at runtime (browser only).</d>
+  </dependencies>
+
+  <self_critique>
+    Every story maps to criteria (map/colors 4-6, legend 9, click 7, messages 11-13, attribution 10). Criteria 5-14 are not pytest-testable; they are owner browser checks per the request. Biggest open risk: clarification 1 (the test) and clarification 2 (circular duplicates), which change observable behavior.
+  </self_critique>
+</spec>
